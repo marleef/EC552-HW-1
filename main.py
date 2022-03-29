@@ -15,8 +15,8 @@ def get_file(fname):
     file.close()
 
 # ======================================================================================
+# ======================================= PARSER =======================================
 # ======================================================================================
-# individual/single list?
 
 
 def parse_UCF(data):
@@ -73,8 +73,8 @@ def parse_input(data):
 
 
 # ======================================================================================
+# ===================================== OPERATIONS =====================================
 # ======================================================================================
-
 
 def stretch(x, ymax, ymin):
     ymax_new = ymax*x
@@ -82,53 +82,51 @@ def stretch(x, ymax, ymin):
     return ymax_new, ymin_new
 
 
-def increase_slope(n, x):
+def promoter(x, ymax, ymin, pick):
+    # pick == 0 -> weaker promoter
+    # pick == 1 -> stronger promoter
+    if pick == 0:
+        ymax_new = ymax/x
+        ymin_new = ymin/x
+    elif pick == 1:
+        ymax_new = ymax*x
+        ymin_new = ymin*x
+    return ymax_new, ymin_new
+
+
+def slope(n, x, pick):
+    # pick == 0 -> decrease slope
+    # pick == 1 -> increase slope
     if x <= 1.05:
-        n_new = n*x
+        if pick == 0:
+            n_new = n/x
+        elif pick == 1:
+            n_new = n*x
     else:
         sys.exit("Invalid x value\n")
     return n_new
 
 
-def decrease_slope(n, x):
-    if x <= 1.05:
-        n_new = n/x
-    else:
-        sys.exit("Invalid x value\n")
-    return n_new
-
-
-def stronger_promoter(x, ymax, ymin):
-    ymax_new = ymax*x
-    ymin_new = ymin*x
-    return ymax_new, ymin_new
-
-
-def weaker_promoter(x, ymax, ymin):
-    ymax_new = ymax/x
-    ymin_new = ymin/x
-    return ymax_new, ymin_new
-
-
-def strong_rbs(k, x):
-    k_new = k/x
+def rbs(k, x, pick):
+    # pick == 0 -> weaker rbs
+    # pick == 1 -> stronger rbs
+    if pick == 0:
+        k_new = k*x
+    elif pick == 1:
+        k_new = k/x
     return k_new
 
 
-def weak_rbs(k, x):
-    k_new = k*x
-    return k_new
-
 # ======================================================================================
+# =================================== SCORE CIRCUIT ===================================
 # ======================================================================================
-
 
 def response_function(ymin, ymax, n, k, x):
     response = ymin + (ymax-ymin)/(1+(x/k) ^ n)
     return response
 
 
-size = 2
+size = 2  # change later
 
 
 def score_circuit(size, ymin, ymax, n, k, x):
@@ -145,8 +143,87 @@ def score_circuit(size, ymin, ymax, n, k, x):
     score = math.log10(on_min/off_max)
     return score
 
+
 # ======================================================================================
+# ===================================== NEW VALUES =====================================
 # ======================================================================================
+
+def compare(scores):
+    position = scores.index(min(scores))
+    return position
+
+
+def y_decision(size, ymin, ymax, n, k, x):
+    ymax_r0 = []
+    ymin_r0 = []
+    ymax_r0[0] = ymax
+    ymin_r0[0] = ymin
+    # score the circuit with the original ymax and ymin values
+    original_score = score_circuit(size, ymin, ymax, n, k, x)
+
+    # apply stretch operation and score the circuit
+    # # compare the original and stretch scores
+    # r1 indicates which score is the lowest
+    ymax_r0[1], ymin_r0[1] = stretch(x, ymax, ymin)
+    stretch_score = score_circuit(size, ymin_r0[1], ymax_r0[1], n, k, x)
+
+    scores = [original_score, stretch_score]
+    r1 = compare(scores)
+
+    ymax_r1 = ymax_r0[r1]
+    ymin_r1 = ymin_r0[r1]
+
+    ymax_r2 = []
+    ymin_r2 = []
+    scores = []
+
+    for i in range(1):
+        ymax_r2[i], ymin_r2[i] = promoter(x, ymax_r1, ymin_r1, i)
+        scores[i] = score_circuit(size, ymin_r2[i], ymax_r2[i], n, k, x)
+
+    # r2 = compare(scores[0], scores[1])
+    r2_pos = compare(scores)
+    ymax_new = ymax_r2[r2_pos]
+    ymin_new = ymin_r2[r2_pos]
+
+    return ymax_new, ymin_new
+
+
+def n_decision(size, ymin, ymax, n, k, x):
+    original_score = score_circuit(size, ymin, ymax, n, k, x)  # global?
+
+    n_vals = []
+    scores = []
+    n_vals[0] = n
+    scores[0] = original_score
+
+    for i in range(1):
+        n_vals[i+1] = slope(n, x, i)
+        scores[i+1] = score_circuit(size, ymin, ymax, n_vals[i+1], k, x)
+
+    pos = compare(scores)
+
+    return n_vals[pos]
+
+
+def k_decision(size, ymin, ymax, n, k, x):
+    original_score = score_circuit(size, ymin, ymax, n, k, x)  # global?
+
+    k_vals = []
+    scores = []
+    k_vals[0] = k
+    scores[0] = original_score
+
+    for i in range(1):
+        k_vals[i+1] = rbs(k, x, i)
+        scores[i+1] = score_circuit(size, ymin, ymax, k_vals[i+1], k, x)
+
+    pos = compare(scores)
+
+    return k_vals[pos]
+
+    # ======================================================================================
+    # ======================================================================================
 
 
 def main():
