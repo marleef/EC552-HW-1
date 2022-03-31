@@ -216,7 +216,7 @@ def k_decision(size, ymin, ymax, n, k, x):
 
     for i in range(1):
         k_vals[i+1] = rbs(k, x, i)
-        scores[i+1] = score_circuit(size, ymin, ymax, k_vals[i+1], k, x)
+        scores[i+1] = score_circuit(size, ymin, ymax, n, k_vals[i+1], x)
 
     pos = compare(scores)
 
