@@ -29,8 +29,6 @@ Genetic circuit design program for modifying custom Eco1C1G1T1.UCF.json and Eco1
 │   └── xor.v
 ├── main.py
 ├── output
-├── poetry.lock
-├── pyproject.toml
 └── README.md
 ```
 
