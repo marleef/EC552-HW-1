@@ -14,6 +14,12 @@ def get_file(fname):
     # send data to another function
     file.close()
 
+
+def write_output(fname, data):
+    with open(fname, 'w') as file:
+        json.dump(data, file)
+    file.close()
+
 # ======================================================================================
 # ======================================= PARSER =======================================
 # ======================================================================================
@@ -149,7 +155,7 @@ def score_circuit(size, ymin, ymax, n, k, x):
 # ======================================================================================
 
 def compare(scores):
-    position = scores.index(min(scores))
+    position = scores.index(min(i for i in scores if i > 0))
     return position
 
 
@@ -244,8 +250,8 @@ def best_score(size, ymin, ymax, n, k, x):
         scores[i+3] = score_circuit(size, ymins[bin[0]],
                                     ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
 
-    best_score = min(scores)
-
+    best_score = min(i for i in scores if i > 0)
+    
     return best_score
 
 # ======================================================================================
