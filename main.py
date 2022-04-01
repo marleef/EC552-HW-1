@@ -5,14 +5,17 @@ from celloapi2 import CelloQuery, CelloResult
 import json
 
 
-def get_file(fname):
-    with open(fname, 'r') as file:
+def read_file(fname,chassis_name):
+    with open('input/'+ fname, 'r') as file:
         content = file.read()
 
     data = json.loads(content)
-    # do something here
-    # send data to another function
+    if fname == f'{chassis_name}.UCF.json':
+       name, ymax, ymin, K, n, alpha, beta = parse_UCF(data)
+    elif fname == f'{chassis_name}.input.json':
+        name, ymax, ymin, K, n, alpha, beta = parse_input(data)
     file.close()
+    return [name, ymax, ymin, K, n, alpha, beta]
 
 # ======================================================================================
 # ======================================= PARSER =======================================
@@ -45,7 +48,7 @@ def parse_UCF(data):
                         alpha.append(data[i][name][j]['value'])
                     elif data[i][name][j]['name'] == 'beta':
                         beta.append(data[i][name][j]['value'])
-
+    print(ymax)
     return name, ymax, ymin, K, n, alpha, beta
 
 
@@ -273,7 +276,34 @@ def main():
         input_sensors=input_sensor_file,
         output_device=output_device_file,
     )
-    operation = input("Enter operation from the following list: /n")
+
+    #Open then parse .json files
+    in_param = read_file(input_sensor_file,chassis_name)
+    UCF_param = read_file(in_ucf,chassis_name)
+
+    #Get user input of operations.
+    operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+    operation = operation.split()
+    while len(operation)>4 or len(operation)==0 or any(['a','b','c','d','e','f','g','x']) != operation:
+        print("Incorrect entry of operations. Try again.\n")
+        operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+        operation = operation.split()
+
+    #Call functions based on input.
+    for i in operation:
+        match operation[i]:
+            case 'a':
+                stretch()
+            case 'b':
+                promoter(x,0)
+            # case 'c':
+            # case 'd':
+            # case 'e':
+            # case 'f':
+            # case 'g':
+            # case 'x':
+
+
     # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
