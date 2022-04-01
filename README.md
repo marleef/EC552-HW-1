@@ -1,4 +1,7 @@
 # EC552-HW-1
+### Authors
+Drew Gross and Marlee Feltham
+
 ## Description
 Genetic circuit design program for modifying custom Eco1C1G1T1.UCF.json and Eco1C1G1T1.input.json files
 
