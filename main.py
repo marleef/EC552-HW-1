@@ -6,6 +6,7 @@ import json
 
 
 def get_file(fname):
+    # open and read .input and .UCF JSON files
     with open(fname, 'r') as file:
         content = file.read()
 
@@ -16,6 +17,7 @@ def get_file(fname):
 
 
 def write_output(fname, data):
+    # open and write to .output JSON file
     with open(fname, 'w') as file:
         json.dump(data, file)
     file.close()
@@ -26,6 +28,7 @@ def write_output(fname, data):
 
 
 def parse_UCF(data):
+    # parse .UCF JSON and store parameters in corresponding lists
     name = []
     ymax = []
     ymin = []
@@ -56,6 +59,7 @@ def parse_UCF(data):
 
 
 def parse_input(data):
+    # parse .input JSON and store parameters in corresponding lists
     name = []
     ymax = []
     ymin = []
@@ -83,12 +87,14 @@ def parse_input(data):
 # ======================================================================================
 
 def stretch(x, ymax, ymin):
+    # apply stretch operation
     ymax_new = ymax*x
     ymin_new = ymin/x
     return ymax_new, ymin_new
 
 
 def promoter(x, ymax, ymin, pick):
+    # apply weaker or stronger promoter operation based on pick value
     # pick == 0 -> weaker promoter
     # pick == 1 -> stronger promoter
     if pick == 0:
@@ -101,6 +107,7 @@ def promoter(x, ymax, ymin, pick):
 
 
 def slope(n, x, pick):
+    # apply increase or decrease slope operation based on pick value
     # pick == 0 -> decrease slope
     # pick == 1 -> increase slope
     if x <= 1.05:
@@ -114,6 +121,7 @@ def slope(n, x, pick):
 
 
 def rbs(k, x, pick):
+    # apply weaker or stronger RBS operation based on pick value
     # pick == 0 -> weaker rbs
     # pick == 1 -> stronger rbs
     if pick == 0:
@@ -128,6 +136,7 @@ def rbs(k, x, pick):
 # ======================================================================================
 
 def response_function(ymin, ymax, n, k, x):
+    # generate response function given parameters
     response = ymin + (ymax-ymin)/(1+(x/k) ^ n)
     return response
 
@@ -136,11 +145,14 @@ size = 2  # change later
 
 
 def score_circuit(size, ymin, ymax, n, k, x):
+    # construct truth table for gate
     ttable = [0]*size
     for i in range(0, size-1):
         ttable[i] = response_function(ymin, ymax, n, k, x[i])
 
     on_min = ttable[0]
+
+    # score the gate based on the truth table
     if size == 2:
         off_max = max(ttable[1])
     else:
@@ -155,11 +167,24 @@ def score_circuit(size, ymin, ymax, n, k, x):
 # ======================================================================================
 
 def compare(scores):
+    # returns the index of scores[] that returns the minimum value > 0
     position = scores.index(min(i for i in scores if i > 0))
     return position
 
 
 def y_decision(size, ymin, ymax, n, k, x):
+    # performs a combination of stretch and promoter operations
+    # returns the best (lowest) score and combination of operations that modify
+    # ymax and ymin
+
+    # (1) score the circuit without applying any operations
+    # (2) score the circuit after applying the stretch operation
+    # (3) compare the scores from (1) and (2)
+    # -> get best score and ymax_new and ymin_new value
+    # (4) use ymax_new and ymin_new values from (3) as inputs for promoter()
+    # (5) score the circuits
+    # (6) compare the scores and return the best score and ymax_new and ymin_new values
+
     ymax_r0 = []
     ymin_r0 = []
     ymax_r0[0] = ymax
@@ -176,6 +201,7 @@ def y_decision(size, ymin, ymax, n, k, x):
     scores = [original_score, stretch_score]
     r1 = compare(scores)
 
+    # ymax_r1 and ymin_r1 are the specified ymax and ymin values resulting from r0
     ymax_r1 = ymax_r0[r1]
     ymin_r1 = ymin_r0[r1]
 
@@ -196,7 +222,10 @@ def y_decision(size, ymin, ymax, n, k, x):
 
 
 def n_decision(size, ymin, ymax, n, k, x):
-    original_score = score_circuit(size, ymin, ymax, n, k, x)  # global?
+    # performs slope operation
+    # returns the best (lowest) score and combination of operations that modify n
+
+    original_score = score_circuit(size, ymin, ymax, n, k, x)
 
     n_vals = []
     scores = []
@@ -213,7 +242,10 @@ def n_decision(size, ymin, ymax, n, k, x):
 
 
 def k_decision(size, ymin, ymax, n, k, x):
-    original_score = score_circuit(size, ymin, ymax, n, k, x)  # global?
+    # performs RBS operation
+    # returns the best (lowest) score and combination of operations that modify K
+
+    original_score = score_circuit(size, ymin, ymax, n, k, x)
 
     k_vals = []
     scores = []
@@ -230,6 +262,11 @@ def k_decision(size, ymin, ymax, n, k, x):
 
 
 def best_score(size, ymin, ymax, n, k, x):
+    # (1) retrieve outputs of y, n, and k_decision
+    # (2) add scores to list scores[]
+    # (3) generate scores from all combinations of each new parameter
+    # (4) find and return the best score
+
     ymax_new, ymin_new, y_decision_score = y_decision(
         size, ymin, ymax, n, k, x)
     n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
