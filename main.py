@@ -250,8 +250,10 @@ def best_score(size, ymin, ymax, n, k, x):
         scores[i+3] = score_circuit(size, ymins[bin[0]],
                                     ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
 
-    best_score = min(i for i in scores if i > 0)
-    
+   # best_score = min(i for i in scores if i > 0)
+    pos = compare(scores)
+    best_score = scores[pos]
+
     return best_score
 
 # ======================================================================================
