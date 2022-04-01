@@ -72,7 +72,7 @@ def parse_input(data):
     beta = []
 
     for i in range(len(data)):
-        if data[i]['collections'] == 'models':
+        if data[i]["collections"] == 'models':
             name.append(data[i]['name'])
             for j in range(len(data[i][name])):
                 if data[i][name][j]['name'] == 'ymax':
@@ -177,15 +177,10 @@ def score_circuit(size, ymin, ymax, n, k, x):
 # ======================================================================================
 
 def compare(scores):
-<<<<<<< HEAD
-    position_min = scores.index(min(scores))
-    return position_min
-=======
     # returns the index of scores[] that returns the minimum value > 0
     position = scores.index(min(i for i in scores if i > 0))
     
     return position
->>>>>>> 2977ec0122e81a602f8d96430b76ae8b2195af7b
 
 
 def y_decision(size, ymin, ymax, n, k, x):
@@ -306,6 +301,7 @@ def best_score(size, ymin, ymax, n, k, x):
     return best_score
 
 # ======================================================================================
+# ========================================MAIN==========================================
 # ======================================================================================
 
 
