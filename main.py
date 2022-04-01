@@ -118,7 +118,7 @@ def rbs(k, x, pick):
 
 
 # ======================================================================================
-# =================================== SCORE CIRCUIT ===================================
+# =================================== SCORE CIRCUIT ====================================
 # ======================================================================================
 
 def response_function(ymin, ymax, n, k, x):
@@ -149,8 +149,8 @@ def score_circuit(size, ymin, ymax, n, k, x):
 # ======================================================================================
 
 def compare(scores):
-    position = scores.index(min(scores))
-    return position
+    position_min = scores.index(min(scores))
+    return position_min
 
 
 def y_decision(size, ymin, ymax, n, k, x):
@@ -234,7 +234,7 @@ def main():
     # Set our input files.
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
-    v_file = 'and.v'
+    v_file = 'logic.v'
     options = 'options.csv'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
@@ -247,7 +247,7 @@ def main():
         input_sensors=input_sensor_file,
         output_device=output_device_file,
     )
-
+    operation = input("Enter operation from the following list: /n")
     # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
