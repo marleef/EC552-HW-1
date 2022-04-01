@@ -93,6 +93,7 @@ def stretch(x, ymax, ymin):
     # apply stretch operation
     ymax_new = ymax*x
     ymin_new = ymin/x
+    
     return ymax_new, ymin_new
 
 
@@ -106,6 +107,7 @@ def promoter(x, ymax, ymin, pick):
     elif pick == 1:
         ymax_new = ymax*x
         ymin_new = ymin*x
+        
     return ymax_new, ymin_new
 
 
@@ -120,6 +122,7 @@ def slope(n, x, pick):
             n_new = n*x
     else:
         sys.exit("Invalid x value\n")
+        
     return n_new
 
 
@@ -131,6 +134,7 @@ def rbs(k, x, pick):
         k_new = k*x
     elif pick == 1:
         k_new = k/x
+        
     return k_new
 
 
@@ -162,6 +166,7 @@ def score_circuit(size, ymin, ymax, n, k, x):
         off_max = max(ttable[1, 3])
 
     score = math.log10(on_min/off_max)
+    
     return score
 
 
@@ -172,6 +177,7 @@ def score_circuit(size, ymin, ymax, n, k, x):
 def compare(scores):
     # returns the index of scores[] that returns the minimum value > 0
     position = scores.index(min(i for i in scores if i > 0))
+    
     return position
 
 
@@ -187,7 +193,6 @@ def y_decision(size, ymin, ymax, n, k, x):
     # (4) use ymax_new and ymin_new values from (3) as inputs for promoter()
     # (5) score the circuits
     # (6) compare the scores and return the best score and ymax_new and ymin_new values
-
     ymax_r0 = []
     ymin_r0 = []
     ymax_r0[0] = ymax
@@ -227,7 +232,6 @@ def y_decision(size, ymin, ymax, n, k, x):
 def n_decision(size, ymin, ymax, n, k, x):
     # performs slope operation
     # returns the best (lowest) score and combination of operations that modify n
-
     original_score = score_circuit(size, ymin, ymax, n, k, x)
 
     n_vals = []
@@ -247,7 +251,6 @@ def n_decision(size, ymin, ymax, n, k, x):
 def k_decision(size, ymin, ymax, n, k, x):
     # performs RBS operation
     # returns the best (lowest) score and combination of operations that modify K
-
     original_score = score_circuit(size, ymin, ymax, n, k, x)
 
     k_vals = []
@@ -269,7 +272,6 @@ def best_score(size, ymin, ymax, n, k, x):
     # (2) add scores to list scores[]
     # (3) generate scores from all combinations of each new parameter
     # (4) find and return the best score
-
     ymax_new, ymin_new, y_decision_score = y_decision(
         size, ymin, ymax, n, k, x)
     n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
