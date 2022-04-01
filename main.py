@@ -186,7 +186,7 @@ def y_decision(size, ymin, ymax, n, k, x):
     ymax_new = ymax_r2[r2_pos]
     ymin_new = ymin_r2[r2_pos]
 
-    return ymax_new, ymin_new
+    return ymax_new, ymin_new, scores[r2_pos]
 
 
 def n_decision(size, ymin, ymax, n, k, x):
@@ -203,7 +203,7 @@ def n_decision(size, ymin, ymax, n, k, x):
 
     pos = compare(scores)
 
-    return n_vals[pos]
+    return n_vals[pos], scores[pos]
 
 
 def k_decision(size, ymin, ymax, n, k, x):
@@ -216,14 +216,40 @@ def k_decision(size, ymin, ymax, n, k, x):
 
     for i in range(1):
         k_vals[i+1] = rbs(k, x, i)
-        scores[i+1] = score_circuit(size, ymin, ymax, k_vals[i+1], k, x)
+        scores[i+1] = score_circuit(size, ymin, ymax, n, k_vals[i+1], x)
 
     pos = compare(scores)
 
-    return k_vals[pos]
+    return k_vals[pos], scores[pos]
 
-    # ======================================================================================
-    # ======================================================================================
+
+def best_score(size, ymin, ymax, n, k, x):
+    ymax_new, ymin_new, y_decision_score = y_decision(
+        size, ymin, ymax, n, k, x)
+    n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
+    k_new, k_decision_score = k_decision(size, ymin, ymax, n, k, x)
+
+    scores = [y_decision_score, n_decision_score, k_decision_score]
+
+    ymaxs = [ymax, ymax_new]
+    ymins = [ymin, ymin_new]
+    ns = [n, n_new]
+    ks = [k, k_new]
+
+    params = 3
+    num = 2**params  # 8 combinations
+
+    for i in range(num-1):
+        bin = format(i, "b")
+        scores[i+3] = score_circuit(size, ymins[bin[0]],
+                                    ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
+
+    best_score = min(scores)
+
+    return best_score
+
+# ======================================================================================
+# ======================================================================================
 
 
 def main():
