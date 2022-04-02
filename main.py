@@ -65,8 +65,7 @@ def parse_UCF(data):
                     #     alpha.append(data[i][name][j]['value'])
                     # elif data[i][name][j]['name'] == 'beta':
                     #     beta.append(data[i][name][j]['value'])
-    print(ymax)
-    return name, ymax, ymin, K, n, alpha, beta
+    return name, ymax, ymin, K, n
 
 
 def parse_input(data):
