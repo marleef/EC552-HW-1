@@ -17,15 +17,14 @@ import json
 
 
 def read_file(fname, chassis_name):
-    with open('input/' + fname, 'r') as file:
-        content = file.read()
-    data = json.loads(content)
+    with open('input/' + fname, 'r') as f:
+        data = json.load(f)
     if fname == f'{chassis_name}.UCF.json':
-        name, ymax, ymin, K, n, alpha, beta = parse_UCF(data)
+        name, ymax, ymin, K, n = parse_UCF(data)
     elif fname == f'{chassis_name}.input.json':
-        name, ymax, ymin, K, n, alpha, beta = parse_input(data)
+        name, ymax, ymin, K, n = parse_input(data)
     file.close()
-    return [name, ymax, ymin, K, n, alpha, beta]
+    return [name, ymax, ymin, K, n]
 
 
 def write_output(fname, data):
@@ -62,10 +61,10 @@ def parse_UCF(data):
                         K.append(data[i][name][j]['value'])
                     elif data[i][name][j]['name'] == 'n':
                         n.append(data[i][name][j]['value'])
-                    elif data[i][name][j]['name'] == 'alpha':
-                        alpha.append(data[i][name][j]['value'])
-                    elif data[i][name][j]['name'] == 'beta':
-                        beta.append(data[i][name][j]['value'])
+                    # elif data[i][name][j]['name'] == 'alpha':
+                    #     alpha.append(data[i][name][j]['value'])
+                    # elif data[i][name][j]['name'] == 'beta':
+                    #     beta.append(data[i][name][j]['value'])
     print(ymax)
     return name, ymax, ymin, K, n, alpha, beta
 
@@ -158,7 +157,6 @@ def response_function(ymin, ymax, n, k, x):
     return response
 
 
-size = 2  # change later
 
 
 def score_circuit(size, ymin, ymax, n, k, x):
@@ -342,12 +340,13 @@ def main():
     # Get user input of operations.
     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
     operation = operation.split()
-    while len(operation) > 4 or len(operation) == 0 or any(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'x']) != operation:
+    while len(operation) > 4 or len(operation) == 0 or any(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'x'] == operation):
         print("Incorrect entry of operations. Try again.\n")
         operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
         operation = operation.split()
 
     # Call functions based on input.
+    x = 2.5
     for i in operation:
         match operation[i]:
             case 'a':
@@ -357,7 +356,7 @@ def main():
             case 'c':
                 slope(n, x, 0)
             case 'd':
-                promoter(x, max, ymin, 1)
+                promoter(x, ymax, ymin, 1)
             case 'e':
                 promoter(x, ymax, ymin, 0)
             case 'f':
@@ -365,8 +364,8 @@ def main():
             case 'g':
                 rbs(k, x, 0)
             case 'x':
-
-                # Submit our query to Cello. This might take a second.
+                break
+    # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
     res = CelloResult(results_dir=out_dir)
