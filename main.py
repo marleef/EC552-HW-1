@@ -311,14 +311,14 @@ def main():
     # Set our input files.
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
-    v_file = 'logic.v'
+    #v_file = 'logic.v'
     options = 'options.csv'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
     q = CelloQuery(
         input_directory=in_dir,
         output_directory=out_dir,
-        verilog_file=v_file,
+        verilog_file=None,
         compiler_options=options,
         input_ucf=in_ucf,
         input_sensors=input_sensor_file,
