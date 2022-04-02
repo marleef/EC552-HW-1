@@ -13,10 +13,9 @@ import json
 # ====================================== FILE R/W ======================================
 # ======================================================================================
 
-# open and read .input and .UCF JSON files
-
 
 def read_file(fname, chassis_name):
+    # open and read .input and .UCF JSON files
     with open('input/' + fname, 'r') as file:
         content = file.read()
     data = json.loads(content)
@@ -50,23 +49,6 @@ def parse_UCF(data):
     ymin = []
     K = []
     n = []
-    # alpha = []
-    # beta = []
-
-    # models = []
-    # for c in data:
-    #     if c['collection'] == 'models':
-    #         for p in c['parameters']:
-    #             if p['name'] == 'ymax':
-    #                 ymax = p['value']
-    #             elif p['name'] == 'ymin':
-    #                 ymin = p['value']
-    #             elif p['name'] == 'K':
-    #                 K = p['value']
-    #             elif p['name'] == 'n':
-    #                 n = p['value']
-    #         model = p['name'].replace('_model', '', ymax, ymin, K, n)
-    #         models.append(model)
 
     for i in range(len(data)):
         if data[i]["collection"] == 'models':
@@ -81,10 +63,7 @@ def parse_UCF(data):
                         K.append(data[i]['name']['value'])
                     elif data[i]['name'] == 'n':
                         n.append(data[i]['name']['value'])
-                    # elif data[i][name][j]['name'] == 'alpha':
-                    #     alpha.append(data[i][name][j]['value'])
-                    # elif data[i][name][j]['name'] == 'beta':
-                    #     beta.append(data[i][name][j]['value'])
+
     return name, ymax, ymin, K, n
 
 
@@ -93,18 +72,6 @@ def parse_input(data):
     name = []
     xhi = []
     xlow = []
-
-    # inputs = []
-    # for c in data:
-    #     if c['collection'] == 'models':
-    #         p = c['parameters']
-    #         for p in parameters:
-    #             if p['name'] == 'ymax':
-    #                 ymax = p['value']
-    #             elif p['name'] == 'ymin':
-    #                 ymin = p['value']
-    #         input = c['name'].replace('_sensor_model', '', ymax, ymin)
-    #         inputs.append(input)
 
     for i in range(len(data)):
         if data[i]["collection"] == 'models':
@@ -117,19 +84,12 @@ def parse_input(data):
                 xlow.append(xlow_add)
             name.append(name_add)
 
-            # elif data[i][name][j]['name'] == 'alpha':
-            #     alpha.append(data[i][name][j]['value'])
-            # elif data[i][name][j]['name'] == 'beta':
-            #     beta.append(data[i][name][j]['value'])
-
-    # # return name, ymax, ymin, alpha, beta
     return name, xlow, xhi
-    # return inputs
-
 
 # ======================================================================================
 # ===================================== OPERATIONS =====================================
 # ======================================================================================
+
 
 def stretch(x, ymax, ymin):
     # apply stretch operation
@@ -187,9 +147,8 @@ def rbs(k, x, pick):
 def response_function(ymin, ymax, n, k, x):
     # generate response function given parameters
     response = ymin + (ymax-ymin)/(1+(x/k) ^ n)
+
     return response
-
-
 
 
 def score_circuit(size, ymin, ymax, n, k, x):
@@ -353,64 +312,62 @@ def main():
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
     v_file = 'logic.v'
-    options = 'logic.csv'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
     q = CelloQuery(
         input_directory=in_dir,
         output_directory=out_dir,
         verilog_file=v_file,
-        compiler_options=options,
+        compiler_options=None,
         input_ucf=in_ucf,
         input_sensors=input_sensor_file,
         output_device=output_device_file,
     )
 
-    # # Open then parse .json files
-    # in_param = read_file(input_sensor_file, chassis_name)
-    # UCF_param = read_file(in_ucf, chassis_name)
+    # Open then parse .json files
+    in_param = read_file(input_sensor_file, chassis_name)
+    UCF_param = read_file(in_ucf, chassis_name)
 
-    # # Get user input of operations.
-    # operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-    # operation = operation.split()
-    # while len(operation) > 4 or len(operation) == 0:
-    #     print("Incorrect entry of operations. Try again.\n")
-    #     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-    #     operation = operation.split()
+    # Get user input of operations.
+    operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+    operation = operation.split()
+    while len(operation) > 4 or len(operation) == 0:
+        print("Incorrect entry of operations. Try again.\n")
+        operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+        operation = operation.split()
 
-    # xhi = in_param[1]
-    # xlow = in_param[2]
-    # ymax = UCF_param[1]
-    # ymin = UCF_param[2]
-    # k = UCF_param[3]
-    # n = UCF_param[4]
+    xhi = in_param[1]
+    xlow = in_param[2]
+    x = [xhi, xlow]
+    ymax = UCF_param[1]
+    ymin = UCF_param[2]
+    k = UCF_param[3]
+    n = UCF_param[4]
 
-
-    # # Call functions based on truth table.
-
-    # for i in range(len(operation)):
-    #     match operation[i]:
-    #         case 'a':
-    #             stretch(x, ymax, ymin)
-    #         case 'b':
-    #             slope(n, x, 1)
-    #         case 'c':
-    #             slope(n, x, 0)
-    #         case 'd':
-    #             promoter(x, ymax, ymin, 1)
-    #         case 'e':
-    #             promoter(x, ymax, ymin, 0)
-    #         case 'f':
-    #             rbs(k, x, 1)
-    #         case 'g':
-    #             rbs(k, x, 0)
-    #         case 'x':
-    #             break
-    # if logic_gate = 'NOT':
-    #     size = 2
-    # elif logic_gate ='NOR':
-    #     size = 4
-    # our_score = score_circuit(size, ymin, ymax, n, k, x)
+    # Call functions based on truth table.
+    for i in range(len(operation)):
+        match operation[i]:
+            case 'a':
+                stretch(x, ymax, ymin)
+            case 'b':
+                slope(n, x, 1)
+            case 'c':
+                slope(n, x, 0)
+            case 'd':
+                promoter(x, ymax, ymin, 1)
+            case 'e':
+                promoter(x, ymax, ymin, 0)
+            case 'f':
+                rbs(k, x, 1)
+            case 'g':
+                rbs(k, x, 0)
+            case 'x':
+                break
+    if logic_gate == 'NOT':
+        size = 2
+    elif logic_gate == 'NOR':
+        size = 4
+    our_score = score_circuit(size, ymin, ymax, n, k, x)
     # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
@@ -420,11 +377,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-##TO DO:
-##fix parse
-##match input to fxn call
-##our scoring
-##api scoring
-##decide what we want to print (scores, sequence)
