@@ -20,13 +20,13 @@ def read_file(fname, chassis_name):
     with open('input/' + fname, 'r') as file:
         content = file.read()
     data = json.loads(content)
-    if fname == f'{chassis_name}.UCF.json':
-        name, xhi, xlow = parse_UCF(data)
+    if fname == f'{chassis_name}.input.json':
+        name, xhi, xlow = parse_input(data)
         file.close()
         return name, xhi, xlow
         # data_list = parse_UCF(data)
-    elif fname == f'{chassis_name}.input.json':
-        name, ymax, ymin, K, n = parse_input(data)
+    elif fname == f'{chassis_name}.UCF.json':
+        name, ymax, ymin, K, n = parse_UCF(data)
         file.close()
         return name, ymax, ymin, K, n
         # data_list = parse_input(data)
@@ -69,18 +69,18 @@ def parse_UCF(data):
     #         models.append(model)
 
     for i in range(len(data)):
-        if data[i]["collections"] == 'models':
+        if data[i]["collection"] == 'models':
             add_name = data[i]['name']
-            if (data[i]["collections"] == 'parameters'):
+            if (data[i]["collection"] == 'parameters'):
                 for j in range(len(data[i][name])):
-                    if data[i][name][j]['name'] == 'ymax':
-                        ymax.append(data[i][name][j]['value'])
-                    elif data[i][name][j]['name'] == 'ymin':
-                        ymin.append(data[i][name][j]['value'])
-                    elif data[i][name][j]['name'] == 'K':
-                        K.append(data[i][name][j]['value'])
-                    elif data[i][name][j]['name'] == 'n':
-                        n.append(data[i][name][j]['value'])
+                    if data[i]['name'] == 'ymax':
+                        ymax.append(data[i]['name']['value'])
+                    elif data[i]['name'] == 'ymin':
+                        ymin.append(data[i]['name']['value'])
+                    elif data[i]['name'] == 'K':
+                        K.append(data[i]['name']['value'])
+                    elif data[i]['name'] == 'n':
+                        n.append(data[i]['name']['value'])
                     # elif data[i][name][j]['name'] == 'alpha':
                     #     alpha.append(data[i][name][j]['value'])
                     # elif data[i][name][j]['name'] == 'beta':
@@ -107,13 +107,12 @@ def parse_input(data):
     #         inputs.append(input)
 
     for i in range(len(data)):
-        if data[i]["collections"] == 'models':
+        if data[i]["collection"] == 'models':
             name_add = data[i]['name']
-            for j in range(len(data[i][name])):
-                if data[i][name][j]['name'] == 'ymax':
-                    xhi_add = data[i][name][j]['value']
-                elif data[i][name][j]['name'] == 'ymin':
-                    xlow_add = data[i][name][j]['value']
+            if data[i]['name'] == 'ymax':
+                xhi_add = data[i]['name']['value']
+            elif data[i]['name'] == 'ymin':
+                xlow_add = data[i]['name']['value']
                 xhi.append(xhi_add)
                 xlow.append(xlow_add)
             name.append(name_add)
@@ -367,43 +366,51 @@ def main():
         output_device=output_device_file,
     )
 
-    # Open then parse .json files
-    in_param = read_file(input_sensor_file, chassis_name)
-    UCF_param = read_file(in_ucf, chassis_name)
+    # # Open then parse .json files
+    # in_param = read_file(input_sensor_file, chassis_name)
+    # UCF_param = read_file(in_ucf, chassis_name)
 
-    # Get user input of operations.
-    operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-    operation = operation.split()
-    while len(operation) > 4 or len(operation) == 0 or any(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'x'] == operation):
-        print("Incorrect entry of operations. Try again.\n")
-        operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-        operation = operation.split()
+    # # Get user input of operations.
+    # operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+    # operation = operation.split()
+    # while len(operation) > 4 or len(operation) == 0:
+    #     print("Incorrect entry of operations. Try again.\n")
+    #     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+    #     operation = operation.split()
 
-    # Call functions based on input.
-    x = 2.5
-    for i in operation:
-        match operation[i]:
-            case 'a':
-                stretch(x, ymax, ymin)
-            case 'b':
-                slope(n, x, 1)
-            case 'c':
-                slope(n, x, 0)
-            case 'd':
-                promoter(x, ymax, ymin, 1)
-            case 'e':
-                promoter(x, ymax, ymin, 0)
-            case 'f':
-                rbs(k, x, 1)
-            case 'g':
-                rbs(k, x, 0)
-            case 'x':
-                break
-    if 'NOT'
-        size = 2
-    elif 'NOR'
-        size = 4
-    our_score = score_circuit(size, ymin, ymax, n, k, x)
+    # xhi = in_param[1]
+    # xlow = in_param[2]
+    # ymax = UCF_param[1]
+    # ymin = UCF_param[2]
+    # k = UCF_param[3]
+    # n = UCF_param[4]
+
+
+    # # Call functions based on truth table.
+
+    # for i in range(len(operation)):
+    #     match operation[i]:
+    #         case 'a':
+    #             stretch(x, ymax, ymin)
+    #         case 'b':
+    #             slope(n, x, 1)
+    #         case 'c':
+    #             slope(n, x, 0)
+    #         case 'd':
+    #             promoter(x, ymax, ymin, 1)
+    #         case 'e':
+    #             promoter(x, ymax, ymin, 0)
+    #         case 'f':
+    #             rbs(k, x, 1)
+    #         case 'g':
+    #             rbs(k, x, 0)
+    #         case 'x':
+    #             break
+    # if logic_gate = 'NOT':
+    #     size = 2
+    # elif logic_gate ='NOR':
+    #     size = 4
+    # our_score = score_circuit(size, ymin, ymax, n, k, x)
     # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
