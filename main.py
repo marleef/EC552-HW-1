@@ -365,6 +365,11 @@ def main():
                 rbs(k, x, 0)
             case 'x':
                 break
+    if 'NOT'
+        size = 2
+    elif 'NOR'
+        size = 4
+    our_score = score_circuit(size, ymin, ymax, n, k, x)
     # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
