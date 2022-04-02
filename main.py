@@ -43,9 +43,9 @@ def parse_UCF(data):
     beta = []
 
     for i in range(len(data)):
-        if data[i]["collections"] == 'models':
+        if data[i]["collection"] == 'models':
             name.append(data[i]['name'])
-            if (data[i]["collections"] == 'parameters'):
+            if (data[i]["collection"] == 'parameters'):
                 for j in range(len(data[i][name])):
                     if data[i][name][j]['name'] == 'ymax':
                         ymax.append(data[i][name][j]['value'])
@@ -72,7 +72,7 @@ def parse_input(data):
     beta = []
 
     for i in range(len(data)):
-        if data[i]["collections"] == 'models':
+        if data[i]["collection"] == 'models':
             name.append(data[i]['name'])
             for j in range(len(data[i][name])):
                 if data[i][name][j]['name'] == 'ymax':
@@ -363,3 +363,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+##TO DO:
+##fix parse
+##match input to fxn call
+##our scoring
+##api scoring
+##decide what we want to print (scores, sequence)

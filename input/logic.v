@@ -1,6 +1,3 @@
-/* 
- Not gate
-*/
 module Not_gate
 (
  a,
@@ -18,9 +15,6 @@ module Not_gate
 endmodule // not_gate
 
 
-/* 
- Nor gate
-*/
 module nor_gate
 (
  a,
