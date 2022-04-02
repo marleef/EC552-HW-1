@@ -353,7 +353,7 @@ def main():
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
     v_file = 'logic.v'
-    options = 'options.csv'
+    options = 'logic.csv'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
     q = CelloQuery(
