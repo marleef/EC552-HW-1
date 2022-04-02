@@ -1,4 +1,4 @@
-""" 
+"""
 EC552 HW 1: Genetic Circuit Design Program
 Drew Gross and Marlee Feltham
 """
@@ -17,18 +17,19 @@ import json
 
 
 def read_file(fname, chassis_name):
-    data_list = []
     with open('input/' + fname, 'r') as file:
         content = file.read()
     data = json.loads(content)
     if fname == f'{chassis_name}.UCF.json':
-        #name, ymax, ymin, K, n, alpha, beta = parse_UCF(data)
-        data_list = parse_UCF(data)
+        name, xhi, xlow = parse_UCF(data)
+        file.close()
+        return name, xhi, xlow
+        # data_list = parse_UCF(data)
     elif fname == f'{chassis_name}.input.json':
-        # name, ymax, ymin, K, n, alpha, beta = parse_input(data)
-        data_list = parse_input(data)
-    file.close()
-    return data_list
+        name, ymax, ymin, K, n = parse_input(data)
+        file.close()
+        return name, ymax, ymin, K, n
+        # data_list = parse_input(data)
 
 
 def write_output(fname, data):
@@ -44,87 +45,93 @@ def write_output(fname, data):
 
 def parse_UCF(data):
     # parse .UCF JSON and store parameters in corresponding lists
-    # name = []
-    # ymax = []
-    # ymin = []
-    # K = []
-    # n = []
+    name = []
+    ymax = []
+    ymin = []
+    K = []
+    n = []
     # alpha = []
     # beta = []
 
-    models = []
-    for c in data:
-        if c['collection'] == 'models':
-            for p in c['parameters']:
-                if p['name'] == 'ymax':
-                    ymax = p['value']
-                elif p['name'] == 'ymin':
-                    ymin = p['value']
-                elif p['name'] == 'K':
-                    K = p['value']
-                elif p['name'] == 'n':
-                    n = p['value']
-            model = p['name'].replace('_model', '', ymax, ymin, K, n)
-            models.append(model)
+    # models = []
+    # for c in data:
+    #     if c['collection'] == 'models':
+    #         for p in c['parameters']:
+    #             if p['name'] == 'ymax':
+    #                 ymax = p['value']
+    #             elif p['name'] == 'ymin':
+    #                 ymin = p['value']
+    #             elif p['name'] == 'K':
+    #                 K = p['value']
+    #             elif p['name'] == 'n':
+    #                 n = p['value']
+    #         model = p['name'].replace('_model', '', ymax, ymin, K, n)
+    #         models.append(model)
 
-    # for i in range(len(data)):
-    #     if data[i]["collections"] == 'models':
-    #         name.append(data[i]['name'])
-    #         if (data[i]["collections"] == 'parameters'):
-    #             for j in range(len(data[i][name])):
-    #                 if data[i][name][j]['name'] == 'ymax':
-    #                     ymax.append(data[i][name][j]['value'])
-    #                 elif data[i][name][j]['name'] == 'ymin':
-    #                     ymin.append(data[i][name][j]['value'])
-    #                 elif data[i][name][j]['name'] == 'K':
-    #                     K.append(data[i][name][j]['value'])
-    #                 elif data[i][name][j]['name'] == 'n':
-    #                     n.append(data[i][name][j]['value'])
+    for i in range(len(data)):
+        if data[i]["collections"] == 'models':
+            add_name = data[i]['name']
+            if (data[i]["collections"] == 'parameters'):
+                for j in range(len(data[i][name])):
+                    if data[i][name][j]['name'] == 'ymax':
+                        ymax_add = data[i][name][j]['value']
+                    if data[i][name][j]['name'] == 'ymin':
+                        ymin_add = data[i][name][j]['value']
+                    if data[i][name][j]['name'] == 'K':
+                        K_add = data[i][name][j]['value']
+                    if data[i][name][j]['name'] == 'n':
+                        n_add = data[i][name][j]['value']
+                    ymax.append(ymax_add)
+                    ymin.append(ymin_add)
+                    K.append(K_add)
+                    n.append(n_add)
     #                 elif data[i][name][j]['name'] == 'alpha':
     #                     alpha.append(data[i][name][j]['value'])
     #                 elif data[i][name][j]['name'] == 'beta':
     #                     beta.append(data[i][name][j]['value'])
     # print(ymax)
-    # return name, ymax, ymin, K, n, alpha, beta
-    return models
+    return name, ymax, ymin, K, n
+    # return models
 
 
 def parse_input(data):
     # parse .input JSON and store parameters in corresponding lists
-    # name = []
-    # xhi = []
-    # xlow = []
-    # alpha = []
-    # beta = []
+    name = []
+    xhi = []
+    xlow = []
 
-    inputs = []
-    for c in data:
-        if c['collection'] == 'models':
-            p = c['parameters']
-            for p in parameters:
-                if p['name'] == 'ymax':
-                    ymax = p['value']
-                elif p['name'] == 'ymin':
-                    ymin = p['value']
-            input = c['name'].replace('_sensor_model', '', ymax, ymin)
-            inputs.append(input)
+    # inputs = []
+    # for c in data:
+    #     if c['collection'] == 'models':
+    #         p = c['parameters']
+    #         for p in parameters:
+    #             if p['name'] == 'ymax':
+    #                 ymax = p['value']
+    #             elif p['name'] == 'ymin':
+    #                 ymin = p['value']
+    #         input = c['name'].replace('_sensor_model', '', ymax, ymin)
+    #         inputs.append(input)
 
-    # for i in range(len(data)):
-    #     if data[i]["collections"] == 'models':
-    #         name.append(data[i]['name'])
-    #         for j in range(len(data[i][name])):
-    #             if data[i][name][j]['name'] == 'ymax':
-    #                 xhi.append(data[i][name][j]['value'])
-    #             elif data[i][name][j]['name'] == 'ymin':
-    #                 xlow.append(data[i][name][j]['value'])
-    #             # elif data[i][name][j]['name'] == 'alpha':
-    #             #     alpha.append(data[i][name][j]['value'])
-    #             # elif data[i][name][j]['name'] == 'beta':
-    #             #     beta.append(data[i][name][j]['value'])
+    for i in range(len(data)):
+        if data[i]["collections"] == 'models':
+            name_add = data[i]['name']
+            for j in range(len(data[i][name])):
+                if data[i][name][j]['name'] == 'ymax':
+                    xhi_add = data[i][name][j]['value']
+                elif data[i][name][j]['name'] == 'ymin':
+                    xlow_add = data[i][name][j]['value']
+                xhi.append(xhi_add)
+                xlow.append(xlow_add)
+            name.append(name_add)
+
+            # elif data[i][name][j]['name'] == 'alpha':
+            #     alpha.append(data[i][name][j]['value'])
+            # elif data[i][name][j]['name'] == 'beta':
+            #     beta.append(data[i][name][j]['value'])
 
     # # return name, ymax, ymin, alpha, beta
-    # return name, xlow, xhi
-    return inputs
+    return name, xlow, xhi
+    # return inputs
 
 
 # ======================================================================================
