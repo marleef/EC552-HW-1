@@ -1,4 +1,4 @@
-""" 
+"""
 EC552 HW 1: Genetic Circuit Design Program
 Drew Gross and Marlee Feltham
 """
@@ -17,14 +17,19 @@ import json
 
 
 def read_file(fname, chassis_name):
-    with open('input/' + fname, 'r') as f:
-        data = json.load(f)
+    with open('input/' + fname, 'r') as file:
+        content = file.read()
+    data = json.loads(content)
     if fname == f'{chassis_name}.UCF.json':
-        name, ymax, ymin, K, n = parse_UCF(data)
+        name, xhi, xlow = parse_UCF(data)
+        file.close()
+        return name, xhi, xlow
+        # data_list = parse_UCF(data)
     elif fname == f'{chassis_name}.input.json':
         name, ymax, ymin, K, n = parse_input(data)
-    file.close()
-    return [name, ymax, ymin, K, n]
+        file.close()
+        return name, ymax, ymin, K, n
+        # data_list = parse_input(data)
 
 
 def write_output(fname, data):
@@ -45,13 +50,28 @@ def parse_UCF(data):
     ymin = []
     K = []
     n = []
-    alpha = []
-    beta = []
+    # alpha = []
+    # beta = []
+
+    # models = []
+    # for c in data:
+    #     if c['collection'] == 'models':
+    #         for p in c['parameters']:
+    #             if p['name'] == 'ymax':
+    #                 ymax = p['value']
+    #             elif p['name'] == 'ymin':
+    #                 ymin = p['value']
+    #             elif p['name'] == 'K':
+    #                 K = p['value']
+    #             elif p['name'] == 'n':
+    #                 n = p['value']
+    #         model = p['name'].replace('_model', '', ymax, ymin, K, n)
+    #         models.append(model)
 
     for i in range(len(data)):
-        if data[i]["collection"] == 'models':
-            name.append(data[i]['name'])
-            if (data[i]["collection"] == 'parameters'):
+        if data[i]["collections"] == 'models':
+            add_name = data[i]['name']
+            if (data[i]["collections"] == 'parameters'):
                 for j in range(len(data[i][name])):
                     if data[i][name][j]['name'] == 'ymax':
                         ymax.append(data[i][name][j]['value'])
@@ -73,24 +93,39 @@ def parse_input(data):
     name = []
     xhi = []
     xlow = []
-    # alpha = []
-    # beta = []
+
+    # inputs = []
+    # for c in data:
+    #     if c['collection'] == 'models':
+    #         p = c['parameters']
+    #         for p in parameters:
+    #             if p['name'] == 'ymax':
+    #                 ymax = p['value']
+    #             elif p['name'] == 'ymin':
+    #                 ymin = p['value']
+    #         input = c['name'].replace('_sensor_model', '', ymax, ymin)
+    #         inputs.append(input)
 
     for i in range(len(data)):
-        if data[i]["collection"] == 'models':
-            name.append(data[i]['name'])
+        if data[i]["collections"] == 'models':
+            name_add = data[i]['name']
             for j in range(len(data[i][name])):
                 if data[i][name][j]['name'] == 'ymax':
-                    xhi.append(data[i][name][j]['value'])
+                    xhi_add = data[i][name][j]['value']
                 elif data[i][name][j]['name'] == 'ymin':
-                    xlow.append(data[i][name][j]['value'])
-                # elif data[i][name][j]['name'] == 'alpha':
-                #     alpha.append(data[i][name][j]['value'])
-                # elif data[i][name][j]['name'] == 'beta':
-                #     beta.append(data[i][name][j]['value'])
+                    xlow_add = data[i][name][j]['value']
+                xhi.append(xhi_add)
+                xlow.append(xlow_add)
+            name.append(name_add)
 
-    # return name, ymax, ymin, alpha, beta
+            # elif data[i][name][j]['name'] == 'alpha':
+            #     alpha.append(data[i][name][j]['value'])
+            # elif data[i][name][j]['name'] == 'beta':
+            #     beta.append(data[i][name][j]['value'])
+
+    # # return name, ymax, ymin, alpha, beta
     return name, xlow, xhi
+    # return inputs
 
 
 # ======================================================================================
