@@ -1,3 +1,8 @@
+""" 
+EC552 HW 1: Genetic Circuit Design Program
+Drew Gross and Marlee Feltham
+"""
+
 import os
 import sys
 import math
@@ -8,13 +13,15 @@ import json
 # ====================================== FILE R/W ======================================
 # ======================================================================================
 
-    # open and read .input and .UCF JSON files
-def read_file(fname,chassis_name):
-    with open('input/'+ fname, 'r') as file:
+# open and read .input and .UCF JSON files
+
+
+def read_file(fname, chassis_name):
+    with open('input/' + fname, 'r') as file:
         content = file.read()
     data = json.loads(content)
     if fname == f'{chassis_name}.UCF.json':
-       name, ymax, ymin, K, n, alpha, beta = parse_UCF(data)
+        name, ymax, ymin, K, n, alpha, beta = parse_UCF(data)
     elif fname == f'{chassis_name}.input.json':
         name, ymax, ymin, K, n, alpha, beta = parse_input(data)
     file.close()
@@ -66,25 +73,26 @@ def parse_UCF(data):
 def parse_input(data):
     # parse .input JSON and store parameters in corresponding lists
     name = []
-    ymax = []
-    ymin = []
-    alpha = []
-    beta = []
+    xhi = []
+    xlow = []
+    # alpha = []
+    # beta = []
 
     for i in range(len(data)):
         if data[i]["collection"] == 'models':
             name.append(data[i]['name'])
             for j in range(len(data[i][name])):
                 if data[i][name][j]['name'] == 'ymax':
-                    ymax.append(data[i][name][j]['value'])
+                    xhi.append(data[i][name][j]['value'])
                 elif data[i][name][j]['name'] == 'ymin':
-                    ymin.append(data[i][name][j]['value'])
-                elif data[i][name][j]['name'] == 'alpha':
-                    alpha.append(data[i][name][j]['value'])
-                elif data[i][name][j]['name'] == 'beta':
-                    beta.append(data[i][name][j]['value'])
+                    xlow.append(data[i][name][j]['value'])
+                # elif data[i][name][j]['name'] == 'alpha':
+                #     alpha.append(data[i][name][j]['value'])
+                # elif data[i][name][j]['name'] == 'beta':
+                #     beta.append(data[i][name][j]['value'])
 
-    return name, ymax, ymin, alpha, beta
+    # return name, ymax, ymin, alpha, beta
+    return name, xlow, xhi
 
 
 # ======================================================================================
@@ -95,7 +103,7 @@ def stretch(x, ymax, ymin):
     # apply stretch operation
     ymax_new = ymax*x
     ymin_new = ymin/x
-    
+
     return ymax_new, ymin_new
 
 
@@ -109,7 +117,7 @@ def promoter(x, ymax, ymin, pick):
     elif pick == 1:
         ymax_new = ymax*x
         ymin_new = ymin*x
-        
+
     return ymax_new, ymin_new
 
 
@@ -124,7 +132,7 @@ def slope(n, x, pick):
             n_new = n*x
     else:
         sys.exit("Invalid x value\n")
-        
+
     return n_new
 
 
@@ -136,7 +144,7 @@ def rbs(k, x, pick):
         k_new = k*x
     elif pick == 1:
         k_new = k/x
-        
+
     return k_new
 
 
@@ -168,7 +176,7 @@ def score_circuit(size, ymin, ymax, n, k, x):
         off_max = max(ttable[1, 3])
 
     score = math.log10(on_min/off_max)
-    
+
     return score
 
 
@@ -179,7 +187,7 @@ def score_circuit(size, ymin, ymax, n, k, x):
 def compare(scores):
     # returns the index of scores[] that returns the minimum value > 0
     position = scores.index(min(i for i in scores if i > 0))
-    
+
     return position
 
 
@@ -327,34 +335,38 @@ def main():
         output_device=output_device_file,
     )
 
-    #Open then parse .json files
-    in_param = read_file(input_sensor_file,chassis_name)
-    UCF_param = read_file(in_ucf,chassis_name)
+    # Open then parse .json files
+    in_param = read_file(input_sensor_file, chassis_name)
+    UCF_param = read_file(in_ucf, chassis_name)
 
-    #Get user input of operations.
+    # Get user input of operations.
     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
     operation = operation.split()
-    while len(operation)>4 or len(operation)==0 or any(['a','b','c','d','e','f','g','x']) != operation:
+    while len(operation) > 4 or len(operation) == 0 or any(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'x']) != operation:
         print("Incorrect entry of operations. Try again.\n")
         operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
         operation = operation.split()
 
-    #Call functions based on input.
+    # Call functions based on input.
     for i in operation:
         match operation[i]:
             case 'a':
-                stretch()
+                stretch(x, ymax, ymin)
             case 'b':
-                promoter(x,0)
-            # case 'c':
-            # case 'd':
-            # case 'e':
-            # case 'f':
-            # case 'g':
-            # case 'x':
+                slope(n, x, 1)
+            case 'c':
+                slope(n, x, 0)
+            case 'd':
+                promoter(x, max, ymin, 1)
+            case 'e':
+                promoter(x, ymax, ymin, 0)
+            case 'f':
+                rbs(k, x, 1)
+            case 'g':
+                rbs(k, x, 0)
+            case 'x':
 
-
-    # Submit our query to Cello. This might take a second.
+                # Submit our query to Cello. This might take a second.
     q.get_results()
     # Fetch our Results.
     res = CelloResult(results_dir=out_dir)
