@@ -6,6 +6,7 @@ Drew Gross and Marlee Feltham
 import sys
 import json
 import math
+from xml.etree.ElementPath import prepare_child
 
 
 # circuit: NOT and NOR gate
@@ -203,140 +204,152 @@ def not_gate(ucf, inputs):
     # print(ttable)
     return ttable
 
-# score = math.log10(on_min/off_max)
+
+def score_circuit(ucf, inputs):
+    not_output = not_gate(ucf, inputs)
+    [ttable, score] = nor_gate(ucf, inputs, not_output)
+    return score
+
 
 # ======================================================================================
 # ===================================== NEW VALUES =====================================
 # ======================================================================================
 
 
-# def compare(scores):
-#     # returns the index of scores[] that returns the minimum value > 0
-#     position = scores.index(min(i for i in scores if i > 0))
+def compare(scores):
+    # returns the index of scores[] that returns the minimum value > 0
+    position = scores.index(min(i for i in scores if i > 0))
 
-#     return position
-
-
-# def y_decision(size, UCF, inputs):
-#     # performs a combination of stretch and promoter operations
-#     # returns the best (lowest) score and combination of operations that modify
-#     # ymax and ymin
-
-#     # (1) score the circuit without applying any operations
-#     # (2) score the circuit after applying the stretch operation
-#     # (3) compare the scores from (1) and (2)
-#     # -> get best score and ymax_new and ymin_new value
-#     # (4) use ymax_new and ymin_new values from (3) as inputs for promoter()
-#     # (5) score the circuits
-#     # (6) compare the scores and return the best score and ymax_new and ymin_new values
-
-#     ymax_r0 = []
-#     ymin_r0 = []
-#     ymax_r0[0] = UCF['ymax']
-#     ymin_r0[0] = UCF['ymin']
-
-#     # score the circuit with the original ymax and ymin values
-#     original_score = score_circuit(size, UCF, inputs)
-
-#     # apply stretch operation and score the circuit
-#     # # compare the original and stretch scores
-#     # r1 indicates which score is the lowest
-
-#     # change into dict
-#     # ymax_r0[1], ymin_r0[1] = stretch(inputs, UCF)
-#     stretch_score = score_circuit(size, UCF, inputs)
-
-#     scores = [original_score, stretch_score]
-#     r1 = compare(scores)
-
-#     # ymax_r1 and ymin_r1 are the specified ymax and ymin values resulting from r0
-#     ymax_r1 = ymax_r0[r1]
-#     ymin_r1 = ymin_r0[r1]
-
-#     ymax_r2 = []
-#     ymin_r2 = []
-#     scores = []
-
-#     for i in range(1):
-#         ymax_r2[i], ymin_r2[i] = promoter(x, ymax_r1, ymin_r1, i)
-#         scores[i] = score_circuit(size, ymin_r2[i], ymax_r2[i], n, k, x)
-
-#     # r2 = compare(scores[0], scores[1])
-#     r2_pos = compare(scores)
-#     ymax_new = ymax_r2[r2_pos]
-#     ymin_new = ymin_r2[r2_pos]
-
-#     return ymax_new, ymin_new, scores[r2_pos]
+    return position
 
 
-# def n_decision(size, ymin, ymax, n, k, x):
-#     # performs slope operation
-#     # returns the best (lowest) score and combination of operations that modify n
-#     original_score = score_circuit(size, ymin, ymax, n, k, x)
-
-#     n_vals = []
-#     scores = []
-#     n_vals[0] = n
-#     scores[0] = original_score
-
-#     for i in range(1):
-#         n_vals[i+1] = slope(n, x, i)
-#         scores[i+1] = score_circuit(size, ymin, ymax, n_vals[i+1], k, x)
-
-#     pos = compare(scores)
-
-#     return n_vals[pos], scores[pos]
+def merge(inputs):
+    copy = inputs[0].copy()
+    copy['ymax'][1] = inputs['ymax'][1]
+    copy['ymin'][1] = inputs['ymin'][1]
+    inputs.append(copy)
+    return inputs
 
 
-# def k_decision(size, ymin, ymax, n, k, x):
-#     # performs RBS operation
-#     # returns the best (lowest) score and combination of operations that modify K
-#     original_score = score_circuit(size, ymin, ymax, n, k, x)
+def y_decision(ucf, inputs, nor_prom, not_prom):
+    # performs a combination of stretch and promoter operations
+    # returns the best (lowest) score and combination of operations that modify
+    # ymax and ymin
 
-#     k_vals = []
-#     scores = []
-#     k_vals[0] = k
-#     scores[0] = original_score
+    proms = [nor_prom, not_prom]
+    original_score = score_circuit(ucf, inputs)
 
-#     for i in range(1):
-#         k_vals[i+1] = rbs(k, x, i)
-#         scores[i+1] = score_circuit(size, ymin, ymax, n, k_vals[i+1], x)
+    x = .85
+    count = 0
+    str_inputs = []
+    stretch_scores = []
 
-#     pos = compare(scores)
+    for i in range(len(proms)):
+        #nor == inputs[0]
+        str_inputs.append(stretch(inputs, proms[i], x))
+        stretch_scores.append(score_circuit(ucf, str_inputs[i]))
 
-#     return k_vals[pos], scores[pos]
+    str_inputs.append(merge(str_inputs))
+    stretch_scores.append(score_circuit(ucf, str_inputs[i+1]))
+
+    ins = [inputs, str_inputs]
+    scores = [original_score, stretch_scores]
+    idx = compare(scores)  # best inputs index
+
+    prom_inputs = []
+    prom_scores = []
+
+    for i in range(len(proms)):
+        prom_inputs.append(promoter(ins[idx], i, proms[i], x))
+        prom_scores.append(score_circuit(ucf, prom_inputs[i]))
+
+    prom_inputs.append(merge(prom_inputs))
+    prom_scores.append(score_circuit(ucf, prom_inputs[i+1]))
+
+    ins = [inputs, prom_inputs]
+    scores = [original_score, prom_scores]
+    idx = compare(scores)  # best inputs index
+
+    return ins[idx], scores[idx]
 
 
-# def best_score(size, ymin, ymax, n, k, x):
-#     # (1) retrieve outputs of y, n, and k_decision
-#     # (2) add scores to list scores[]
-#     # (3) generate scores from all combinations of each new parameter
-#     # (4) find and return the best score
-#     ymax_new, ymin_new, y_decision_score = y_decision(
-#         size, ymin, ymax, n, k, x)
-#     n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
-#     k_new, k_decision_score = k_decision(size, ymin, ymax, n, k, x)
+def n_decision(ucf, inputs, nor_prom, not_prom):
+    # performs slope operation
+    # returns the best (lowest) score and combination of operations that modify n
+    proms = [nor_prom, not_prom]
+    original_score = score_circuit(ucf, inputs)
+    x = .85
+    scores = [original_score]
+    slope_inputs = []
 
-#     scores = [y_decision_score, n_decision_score, k_decision_score]
+    for i in range(len(proms)):
+        slope_inputs.append(slope(inputs, i, proms[i], x))
+        scores.append(score_circuit(ucf, slope_inputs[i]))
 
-#     ymaxs = [ymax, ymax_new]
-#     ymins = [ymin, ymin_new]
-#     ns = [n, n_new]
-#     ks = [k, k_new]
+    slope_inputs.append(merge(slope_inputs))
+    scores.append(score_circuit(ucf, slope_inputs[i+1]))
 
-#     params = 3
-#     num = 2**params  # 8 combinations
+    ins = [inputs, slope_inputs]
+    idx = compare(scores)
 
-#     for i in range(num-1):
-#         bin = format(i, "b")
-#         scores[i+3] = score_circuit(size, ymins[bin[0]],
-#                                     ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
+    return ins[idx], scores[idx]
 
-#    # best_score = min(i for i in scores if i > 0)
-#     pos = compare(scores)
-#     best_score = scores[pos]
 
-#     return best_score
+def k_decision(ucf, inputs, nor_prom, not_prom):
+    # performs RBS operation
+    # returns the best (lowest) score and combination of operations that modify K
+    proms = [nor_prom, not_prom]
+    original_score = score_circuit(ucf, inputs)
+    x = .85
+    scores = [original_score]
+    rbs_inputs = []
+
+    for i in range(len(proms)):
+        rbs_inputs.append(slope(inputs, i, proms[i], x))
+        scores.append(score_circuit(ucf, rbs_inputs[i]))
+
+    rbs_inputs.append(merge(rbs_inputs))
+    scores.append(score_circuit(ucf, rbs_inputs[i+1]))
+
+    ins = [inputs, rbs_inputs]
+    idx = compare(scores)
+
+    return ins[idx], scores[idx]
+
+
+def best_score(ucf, inputs, nor_prom, not_prom):
+    y_inputs, y_score = y_decision(ucf, inputs, nor_prom, not_prom)
+    n_inputs, n_score = n_decision(ucf, inputs, nor_prom, not_prom)
+    k_inputs, k_score = k_decision(ucf, inputs, nor_prom, not_prom)
+
+    scores = [y_score, n_score, k_score]
+
+    ins = [inputs, y_inputs, n_inputs, k_inputs]
+
+    copy = y_inputs.copy()
+    copy['n'] = n_inputs['n']
+    ins.append(copy)
+
+    copy = y_inputs.copy()
+    copy['K'] = k_inputs['K']
+    ins.append(copy)
+
+    copy['n'] = n_inputs['n']
+    ins.append(copy)
+
+    copy = n_inputs.copy()
+    copy['K'] = n_inputs['n']
+    ins.append(copy)
+    # [inputs, y, n, k, y+n, y+k, y+k+n, n+k]
+
+    for i in range(len(ins)-4):
+        scores.append(score_circuit(ucf, ins[i+4]))
+
+    idx = compare(scores)
+
+    return scores[idx]
+
+
 def x_in():
     x = input("Define x value (0 < x <= 1.05)\n")
     if float(x) <= 0 or float(x) > 1.05:
@@ -354,33 +367,15 @@ def main():
     output_device_file = f'{chassis_name}.output.json'
     in_param = read_file(input_sensor_file)
     UCF_param = read_file(in_ucf)
-    # inputs = parse_input(in_param)
+
     gate_not = 'A1_AmtR_model'
     gate_nor = 'P3_PhlF_model'
     nor_prom = 'TetR_sensor_model'
     not_prom = 'LuxR_sensor_model'
     ucf = parse_UCF(UCF_param, gate_not, gate_nor)
     inputs = parse_input(in_param, not_prom, nor_prom)
-    # not_output = not_gate(ucf, inputs)
-    # nor_output = nor_gate(ucf, inputs, not_output)
 
     print("\n======== INPUT SIGNALS ======== \n")
-    # ans = input(
-    #     "Choose a NOT gate promoter:\n(a) LacI\n(b) TetR\n(c) AraC\n(d) LuxR\n(x) default\n")
-
-    # if ans == 'a':
-    #     not_prom = 'LacI_sensor_model'
-    # elif ans == 'b':
-    #     not_prom = 'TetR_sensor_model'
-    # elif ans == 'c':
-    #     not_prom = 'AraC_sensor_model'
-    # elif ans == 'd':
-    #     not_prom = 'LuxR_sensor_model'
-    # elif ans == 'x':
-    #     not_prom = 'LuxR_sensor_model'
-    # else:
-    #     sys.exit('Invalid  entry.\n')
-
     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
     operation = [i for i in operation]
 
@@ -405,145 +400,11 @@ def main():
         elif operation[i] == 'x':
             new_inputs = inputs.copy()
             break
-    # inputs['ymin'][0] = inputs['ymin'][0]*2
 
-    # print(inputs)
-    # print(new_inputs)
     not_output = not_gate(ucf, new_inputs)
     nor_output, score = nor_gate(ucf, new_inputs, not_output)
     print(score)
     print('\n')
-
-    # ans = input(
-    #     "Choose a NOR gate promoter:\n(a) LacI\n(b) TetR\n(c) AraC\n(d) LuxR\n(x) default\n")
-
-    # if ans == 'a':
-    #     nor_prom = 'LacI_sensor_model'
-    # elif ans == 'b':
-    #     nor_prom = 'TetR_sensor_model'
-    # elif ans == 'c':
-    #     nor_prom = 'AraC_sensor_model'
-    # elif ans == 'd':
-    #     nor_prom = 'LuxR_sensor_model'
-    # elif ans == 'x':
-    #     nor_prom = 'TetR_sensor_model'
-    # else:
-    #     sys.exit('Invalid  entry\n')
-
-    # print("\n============ GATES ============\n")
-    # # NOR gate command line
-    # ans = input(
-    #     "Choose a NOR gate promoter:\n(a) A1_AmtR\n(b) B#_BM3R1\n(c) E1_BetI\n(d) F1_AmeR\n(e) H1_HlyIIR\n(f) I1_IcaRA\n(g) L1_LitR\n(h) N1_LmrA\n(i) P#_PhlF\n(j) Q2_QacR\n(k) R1_PsrA\n(l) S1_SrpR_model\n(x) default\n")
-    # if ans == 'a':
-    #     gate_nor = 'A1_AmtR_model'
-    # elif ans == 'b':
-    #     gate_num = input(
-    #         '(1), (2), or (3)? Enter the corresponding #\n')
-    #     if gate_num == '1':
-    #         gate_nor = 'B1_BM3R1_model'
-    #     elif gate_num == '2':
-    #         gate_nor = 'B2_BM3R1_model'
-    #     elif gate_num == '3':
-    #         gate_nor = 'B3_BM3R1_model'
-    #     else:
-    #         sys.exit("Invalid entry\n")
-    # elif ans == 'c':
-    #     gate_nor = 'E1_BetI_model'
-    # elif ans == 'd':
-    #     gate_nor = 'F1_AmeR_model'
-    # elif ans == 'e':
-    #     gate_nor = 'H1_HlyIIR_model'
-    # elif ans == 'f':
-    #     gate_nor = 'I1_IcaRA_model'
-    # elif ans == 'g':
-    #     gate_nor = 'L1_LitR_model'
-    # elif ans == 'h':
-    #     gate_nor = 'N1_LmrA_model'
-    # elif ans == 'i':
-    #     gate_num = input('(1), (2), or (3)? Enter the corresponding #\n')
-    #     if gate_num == '1':
-    #         gate_nor = 'P1_PhlF_model'
-    #     elif gate_num == '2':
-    #         gate_nor = 'P2_PhlF_model'
-    #     elif gate_num == '3':
-    #         gate_nor = 'P3_PhlF_model'
-    #     else:
-    #         sys.exit("Invalid entry\n")
-    # elif ans == 'j':
-    #     gate_nor = 'Q2_QacR_model'
-    # elif ans == 'k':
-    #     gate_nor = 'R1_PsrA_model'
-    # elif ans == 'l':
-    #     gate_num = input('(1), (2), (3), or (4)? Enter the corresponding #\n')
-    #     if gate_num == '1':
-    #         gate_nor = 'S1_SrpR_model'
-    #     elif gate_num == '2':
-    #         gate_nor = 'S2_SrpR_model'
-    #     elif gate_num == '3':
-    #         gate_nor = 'S3_SrpR_model'
-    #     elif gate_num == '4':
-    #         gate_nor = 'S4_SrpR_model'
-    #     else:
-    #         sys.exit("Invalid entry\n")
-    # elif ans == 'x':
-    #     gate_nor = 'P3_PhlF_model'
-
-    # # NOT gate command line
-    # ans = input(
-    #     "Choose a NOT gate promoter:\n(a) A1_AmtR\n(b) B#_BM3R1\n(c) E1_BetI\n(d) F1_AmeR\n(e) H1_HlyIIR\n(f) I1_IcaRA\n(g) L1_LitR\n(h) N1_LmrA\n(i) P#_PhlF\n(j) Q2_QacR\n(k) R1_PsrA\n(l) S1_SrpR_model\n(x) default\n")
-    # if ans == 'a':
-    #     gate_not = 'A1_AmtR_model'
-    # elif ans == 'b':
-    #     gate_num = input(
-    #         '(1), (2), or (3)? Enter the corresponding #\n')
-    #     if gate_num == '1':
-    #         gate_not = 'B1_BM3R1_model'
-    #     elif gate_num == '2':
-    #         gate_not = 'B2_BM3R1_model'
-    #     elif gate_num == '3':
-    #         gate_not = 'B3_BM3R1_model'
-    #     else:
-    #         sys.exit("Invalid entry\n")
-    # elif ans == 'c':
-    #     gate_not = 'E1_BetI_model'
-    # elif ans == 'd':
-    #     gate_not = 'F1_AmeR_model'
-    # elif ans == 'e':
-    #     gate_not = 'H1_HlyIIR_model'
-    # elif ans == 'f':
-    #     gate_not = 'I1_IcaRA_model'
-    # elif ans == 'g':
-    #     gate_not = 'L1_LitR_model'
-    # elif ans == 'h':
-    #     gate_not = 'N1_LmrA_model'
-    # elif ans == 'i':
-    #     gate_num = input('(1), (2), or (3)? Enter the corresponding #\n')
-    #     if gate_num == '1':
-    #         gate_not = 'P1_PhlF_model'
-    #     elif gate_num == '2':
-    #         gate_not = 'P2_PhlF_model'
-    #     elif gate_num == '3':
-    #         gate_not = 'P3_PhlF_model'
-    #     else:
-    #         sys.exit("Invalid entry\n")
-    # elif ans == 'j':
-    #     gate_not = 'Q2_QacR_model'
-    # elif ans == 'k':
-    #     gate_not = 'R1_PsrA_model'
-    # elif ans == 'l':
-    #     gate_num = input('(1), (2), (3), or (4)? Enter the corresponding #\n')
-    #     if gate_num == '1':
-    #         gate_not = 'S1_SrpR_model'
-    #     elif gate_num == '2':
-    #         gate_not = 'S2_SrpR_model'
-    #     elif gate_num == '3':
-    #         gate_not = 'S3_SrpR_model'
-    #     elif gate_num == '4':
-    #         gate_not = 'S4_SrpR_model'
-    #     else:
-    #         sys.exit("Invalid entry\n")
-    # elif ans == 'x':
-    #     gate_not = 'A1_AmtR_model'
 
 
 if __name__ == "__main__":
