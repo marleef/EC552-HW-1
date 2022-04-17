@@ -4,16 +4,14 @@ Drew Gross and Marlee Feltham
 """
 
 import os
-
 import sys
 import math
-# from celloapi2 import CelloQuery, CelloResult
 import json
 
 
 # circuit: NOT and NOR gate
-# pLuxStar----- NOT ________
-#              pTet ________|---NOR--output
+# pLuxStar----- NOT P3_PhlF ________
+#                      pTet ________|---NOR A1_AmtR--output
 # not input: pluxstar
 # not gate: P3_PhlF
 # nor input a: not output
@@ -25,22 +23,12 @@ import json
 # ======================================================================================
 
 
-def read_file(fname, chassis_name):
+def read_file(fname):
     # open and read .input and .UCF JSON files
-    with open('input/' + fname, 'r') as file:
+    with open(fname, 'r') as file:
         content = file.read()
     data = json.loads(content)
-    if fname == f'{chassis_name}.input.json':
-        inputs = parse_input(data)
-        file.close()
-        return inputs
-        # data_list = parse_UCF(data)
-    elif fname == f'{chassis_name}.UCF.json':
-        UCF = {}
-        UCF = parse_UCF(data)
-        file.close()
-        return UCF
-        # data_list = parse_input(data)
+    return data
 
 
 def write_output(fname, data):
@@ -54,42 +42,65 @@ def write_output(fname, data):
 # ======================================================================================
 
 
-def parse_UCF(data):
-    UCF = {}
-    for i in range(len(data)):
-        if data[i]["collection"] == 'models':
-            if data[i]['name'] == "P3_PhlF_model" or data[i]['name'] == "A1_AmtR_model":
-                UCF['name'] = data[i]['name']
-                if (data[i]["collection"] == 'parameters'):
-                    for j in range(len(data[i]['name'])):
-                        if data[i]['name'] == 'ymax':
-                            UCF['ymax'] = data[i]['name']['value']
-                        elif data[i]['name'] == 'ymin':
-                            UCF['ymax'] = data[i]['name']['value']
-                        elif data[i]['name'] == 'K':
-                            UCF['k'] = data[i]['name']['value']
-                        elif data[i]['name'] == 'n':
-                            UCF['n'] = data[i]['name']['value']
-    return UCF
-
-
-def parse_input(data):
-    inputs = {}
+def parse_UCF(data, gate_not, gate_nor):
+    ucf = {}
     name = []
     ymax = []
     ymin = []
+    n = []
+    k = []
     for i in range(len(data)):
-        if data[i]['collection'] == 'models':
-            if data[i]['name'] == 'LuxR_sensor_model' or data[i]['name'] == 'TetR_sensor_model':
+        if data[i]["collection"] == "models":
+            if data[i]['name'] == gate_not or data[i]['name'] == gate_nor:
                 name.append(data[i]['name'])
                 for j in range(len(data[i]['parameters'])):
                     if data[i]['parameters'][j]['name'] == 'ymax':
                         ymax.append(data[i]['parameters'][j]['value'])
                     elif data[i]['parameters'][j]['name'] == 'ymin':
                         ymin.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'n':
+                        n.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'K':
+                        k.append(data[i]['parameters'][j]['value'])
+
+    ucf['name'] = name
+    ucf['ymin'] = ymin
+    ucf['ymax'] = ymax
+    ucf['n'] = n
+    ucf['K'] = k
+
+    print(ucf)
+    return ucf
+
+
+def parse_input(data, not_prom, nor_prom):
+    inputs = {}
+    name = []
+    ymax = []
+    ymin = []
+    n = []
+    k = []
+    for i in range(len(data)):
+        if data[i]['collection'] == 'models':
+            if data[i]['name'] == not_prom or data[i]['name'] == nor_prom:
+                name.append(data[i]['name'])
+                for j in range(len(data[i]['parameters'])):
+                    if data[i]['parameters'][j]['name'] == 'ymax':
+                        ymax.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'ymin':
+                        ymin.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'alpha':
+                        n.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'beta':
+                        k.append(data[i]['parameters'][j]['value'])
+
     inputs['name'] = name
     inputs['ymin'] = ymin
     inputs['ymax'] = ymax
+    inputs['n'] = n
+    inputs['K'] = k
+
+    print(inputs)
     return inputs
 
 # ======================================================================================
@@ -97,93 +108,103 @@ def parse_input(data):
 # ======================================================================================
 
 
-def stretch(inputs, UCF):
+def stretch(inputs, ucf, gate, x):
     # apply stretch operation
-    newUCF = UCF.copy()
+    for i in len(inputs['name']):
+        if ucf['name'][i] == gate:
+            break
 
-    newUCF['ymax'] = UCF['ymax']*inputs['x']
-    newUCF['ymin'] = UCF['ymin']/inputs['x']
+    inputs['ymax'][i] = inputs['ymax'][i]*x
+    inputs['ymin'][i] = inputs['ymin'][i]/x
 
-    return newUCF
+    return inputs
 
 
-def promoter(inputs, UCF, pick):
+def promoter(inputs, ucf, pick, signal, x):
     # apply weaker or stronger promoter operation based on pick value
     # pick == 0 -> weaker promoter
     # pick == 1 -> stronger promoter
-    newUCF = UCF.copy()
+    for i in len(inputs['name']):
+        if inputs['name'][i] == signal:
+            break
 
     if pick == 0:
-        newUCF['ymax'] = UCF['ymax']/inputs['x']
-        newUCF['ymin'] = UCF['ymin']/inputs['x']
+        inputs['ymax'][i] = inputs['ymax']/x
+        inputs['ymin'][i] = inputs['ymin']/x
     elif pick == 1:
-        newUCF['ymax'] = UCF['ymax']*inputs['x']
-        newUCF['ymin'] = UCF['ymin']*inputs['x']
+        inputs['ymax'][i] = inputs['ymax'][i]*x
+        inputs['ymin'][i] = inputs['ymin'][i]*x
 
-    return newUCF
+    return inputs
 
 
-def slope(UCF, inputs, pick):
+def slope(inputs, pick, signal, x):
     # apply increase or decrease slope operation based on pick value
     # pick == 0 -> decrease slope
     # pick == 1 -> increase slope
-    newUCF = UCF.copy()
+    for i in len(inputs['name']):
+        if inputs['name'][i] == signal:
+            break
 
-    if inputs['x'] <= 1.05:
         if pick == 0:
-            newUCF['n'] = UCF['n']/inputs['x']
+            inputs['n'][i] = inputs['n']/x
         elif pick == 1:
-            newUCF['n'] = UCF['n']*inputs['x']
-    else:
-        sys.exit("Invalid x value\n")
+            inputs['n'][i] = inputs['n']*x
 
-    return newUCF
+    return inputs
 
 
-def rbs(UCF, inputs, pick):
+def rbs(inputs, pick, signal, x):
     # apply weaker or stronger RBS operation based on pick value
     # pick == 0 -> weaker rbs
     # pick == 1 -> stronger rbs
-    newUCF = UCF.copy()
+    for i in len(inputs['name']):
+        if inputs['name'][i] == signal:
+            break
 
     if pick == 0:
-        newUCF['k'] = UCF['k']*inputs['x']
+        inputs['k'][i] = inputs['k']*x
     elif pick == 1:
-        newUCF['k'] = UCF['k']/inputs['x']
+        inputs['k'][i] = inputs['k']/x
 
-    return newUCF
+    return inputs
 
 
 # ======================================================================================
 # =================================== SCORE CIRCUIT ====================================
 # ======================================================================================
+def nor_gate(ucf, inputs, not_output):
+    x = [inputs['ymin'][0]+not_output[0],
+         inputs['ymin'][0]+not_output[1],
+         inputs['ymax'][0]+not_output[1],
+         inputs['ymax'][0]+not_output[0]]
+    print(x)
 
-def response_function(UCF, inputs):
-    # generate response function given parameters
-    response = UCF['ymin'] + (UCF['ymax']-UCF['ymin']) / \
-        (1+(inputs['x']/UCF['k']) ^ UCF['n'])
+    ttable = [0]*4
 
-    return response
+    ttable[0] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[0]/ucf['K'][0]) ** ucf['n'][0]))
+    ttable[1] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[1]/ucf['K'][0]) ** ucf['n'][0]))
+    ttable[2] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[2]/ucf['K'][0]) ** ucf['n'][0]))
+    ttable[3] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[3]/ucf['K'][0]) ** ucf['n'][0]))
+    return ttable
 
 
-def score_circuit(size, UCF, inputs):
-    # construct truth table for gate
-    ttable = [0]*size
-    for i in range(0, size-1):
-        ttable[i] = response_function(
-            UCF['ymin'], UCF['ymax'], UCF['n'], UCF['k'], inputs['x'])
+def not_gate(ucf, inputs):
+    ttable = [0]*2
 
-    on_min = ttable[0]
+    ttable[0] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
+                      (1+(inputs['ymin'][0]/ucf['K'][1]) ** ucf['n'][1]))
+    ttable[1] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
+                      (1+(inputs['ymax'][0]/ucf['K'][1]) ** ucf['n'][1]))
+    print(ttable)
+    return ttable
 
-    # score the gate based on the truth table
-    if size == 2:
-        off_max = max(ttable[1])
-    else:
-        off_max = max(ttable[1, 3])
 
-    score = math.log10(on_min/off_max)
-
-    return score
+# score = math.log10(on_min/off_max)
 
 
 # ======================================================================================
@@ -331,23 +352,13 @@ def main():
     # Set our input files.
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
-    # v_file = 'logic.v'
-    options = 'options.csv'
+    # options = 'options.csv'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
-    # q = CelloQuery(
-    #     input_directory=in_dir,
-    #     output_directory=out_dir,
-    #     verilog_file=None,
-    #     compiler_options=options,
-    #     input_ucf=in_ucf,
-    #     input_sensors=input_sensor_file,
-    #     output_device=output_device_file,
-    # )
 
     # Open then parse .json files
-    in_param = read_file(input_sensor_file, chassis_name)
-    UCF_param = read_file(in_ucf, chassis_name)
+    in_param = read_file(input_sensor_file)
+    UCF_param = read_file(in_ucf)
 
     # Get user input of operations.
     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
@@ -357,14 +368,15 @@ def main():
         operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
         operation = operation.split()
 
-    xhi = in_param[1]
-    xlow = in_param[2]
-    x = [xhi, xlow]
-    ymax = UCF_param[1]
-    ymin = UCF_param[2]
-    k = UCF_param[3]
-    n = UCF_param[4]
-
+    # xhi = in_param[1]
+    # xlow = in_param[2]
+    # x = [xhi, xlow]
+    # ymax = UCF_param[1]
+    # ymin = UCF_param[2]
+    # k = UCF_param[3]
+    # n = UCF_param[4]
+    if x > 1.05:
+        sys.exit("Invalid x value\n")
     # Call functions based on truth table.
     for i in range(len(operation)):
         match operation[i]:
@@ -384,16 +396,6 @@ def main():
                 rbs(k, x, 0)
             case 'x':
                 break
-    # if logic_gate = 'NOT':
-    #     size = 2
-    # elif logic_gate = 'NOR':
-    #     size = 4
-    our_score = score_circuit(size, ymin, ymax, n, k, x)
-    # Submit our query to Cello. This might take a second.
-    # q.get_results()
-    # # Fetch our Results.
-    # res = CelloResult(results_dir=out_dir)
-    # print(res.circuit_score)
 
 
 if __name__ == "__main__":
