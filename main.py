@@ -175,11 +175,9 @@ def nor_gate(ucf, inputs, not_output):
     x = [inputs['ymin'][0]+not_output[0],
          inputs['ymin'][0]+not_output[1],
          inputs['ymax'][0]+not_output[0],
-         inputs['ymax'][0]+not_output[1],
-         ]
+         inputs['ymax'][0]+not_output[1]]
 
     ttable = [0]*4
-
     ttable[0] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
                       [0]) / (1+(x[0]/ucf['K'][0]) ** ucf['n'][0]))
     ttable[1] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
@@ -191,20 +189,13 @@ def nor_gate(ucf, inputs, not_output):
 
     on_min = ttable[1]
     off_max = ttable[3]
-    # print(ttable)
     score = math.log10(on_min/off_max)
+
     return ttable, score
 
 
 def not_gate(ucf, inputs):
     ttable = [0]*2
-    print(inputs['name'][1])
-    print(ucf['K'][1])
-    numer = ucf['ymax'][1]-ucf['ymin'][1]
-    denom = 1 + (inputs['ymin'][1]/ucf['K'][1])**ucf['n'][1]
-    print(numer/denom)
-    print(denom)
-    print(numer)
     ttable[0] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
                       (1+(inputs['ymin'][1]/ucf['K'][1]) ** ucf['n'][1]))
     ttable[1] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
@@ -346,7 +337,11 @@ def not_gate(ucf, inputs):
 #     best_score = scores[pos]
 
 #     return best_score
-
+def x_in():
+    x = input("Define x value (0 < x <= 1.05)\n")
+    if float(x) <= 0 or float(x) > 1.05:
+        sys.exit("Invalid x value.\n")
+    return x
 # ======================================================================================
 # ========================================MAIN==========================================
 # ======================================================================================
@@ -394,40 +389,19 @@ def main():
 
     for i in range(len(operation)):
         if operation[i] == 'a':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = stretch(inputs, not_prom, float(x))
+            new_inputs = stretch(inputs, not_prom, float(x_in()))
         elif operation[i] == 'b':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = slope(inputs, 1, not_prom, float(x))
+            new_inputs = slope(inputs, 1, not_prom, float(x_in()))
         elif operation[i] == 'c':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = slope(inputs, 0, not_prom, float(x))
+            new_inputs = slope(inputs, 0, not_prom, float(x_in()))
         elif operation[i] == 'd':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = promoter(inputs, 1, not_prom, float(x))
+            new_inputs = promoter(inputs, 1, not_prom, float(x_in()))
         elif operation[i] == 'e':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = promoter(inputs, 0, not_prom, float(x))
+            new_inputs = promoter(inputs, 0, not_prom, float(x_in()))
         elif operation[i] == 'f':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = rbs(inputs, 1, not_prom, float(x))
+            new_inputs = rbs(inputs, 1, not_prom, float(x_in()))
         elif operation[i] == 'g':
-            x = input("Define x value (0 >= x <= 1.05)\n")
-            if float(x) < 0 or float(x) > 1.05:
-                sys.exit("Invalid x value.\n")
-            new_inputs = rbs(inputs, 0, not_prom, float(x))
+            new_inputs = rbs(inputs, 0, not_prom, float(x_in()))
         elif operation[i] == 'x':
             new_inputs = inputs.copy()
             break
