@@ -108,66 +108,76 @@ def parse_input(data, not_prom, nor_prom):
 # ======================================================================================
 
 
-def stretch(inputs, ucf, gate, x):
-    # apply stretch operation
-    for i in len(inputs['name']):
-        if ucf['name'][i] == gate:
+def stretch(inputs, gate, x):
+    new_inputs = inputs.copy()
+
+    for i in range(len(inputs['name'])):
+        if inputs['name'][i] == gate:
             break
 
-    inputs['ymax'][i] = inputs['ymax'][i]*x
-    inputs['ymin'][i] = inputs['ymin'][i]/x
+    new_inputs['ymax'][i] = inputs['ymax'][i]*x
+    new_inputs['ymin'][i] = inputs['ymin'][i]/x
 
-    return inputs
+    return new_inputs
 
 
-def promoter(inputs, ucf, pick, signal, x):
+def promoter(inputs, pick, gate, x):
     # apply weaker or stronger promoter operation based on pick value
     # pick == 0 -> weaker promoter
     # pick == 1 -> stronger promoter
-    for i in len(inputs['name']):
-        if inputs['name'][i] == signal:
+    new_inputs = {}
+    new_inputs = inputs.copy()
+    for i in range(len(inputs['name'])):
+
+        if inputs['name'][i] == gate:
             break
 
     if pick == 0:
-        inputs['ymax'][i] = inputs['ymax']/x
-        inputs['ymin'][i] = inputs['ymin']/x
+        new_inputs['ymax'][i] = inputs['ymax'][i]/x
+        new_inputs['ymin'][i] = inputs['ymin'][i]/x
     elif pick == 1:
-        inputs['ymax'][i] = inputs['ymax'][i]*x
-        inputs['ymin'][i] = inputs['ymin'][i]*x
+        new_inputs['ymax'][i] = inputs['ymax'][i]*x
+        new_inputs['ymin'][i] = inputs['ymin'][i]*x
 
     return inputs
 
 
-def slope(inputs, pick, signal, x):
+def slope(inputs, pick, gate, x):
     # apply increase or decrease slope operation based on pick value
     # pick == 0 -> decrease slope
     # pick == 1 -> increase slope
-    for i in len(inputs['name']):
-        if inputs['name'][i] == signal:
+    new_inputs = {}
+    new_inputs = inputs.copy()
+
+    for i in range(len(inputs['name'])):
+        if inputs['name'][i] == gate:
             break
 
         if pick == 0:
-            inputs['n'][i] = inputs['n']/x
+            new_inputs['n'][i] = inputs['n'][i]/x
         elif pick == 1:
-            inputs['n'][i] = inputs['n']*x
+            new_inputs['n'][i] = inputs['n'][i]*x
 
-    return inputs
+    return new_inputs
 
 
-def rbs(inputs, pick, signal, x):
+def rbs(inputs, pick, gate, x):
     # apply weaker or stronger RBS operation based on pick value
     # pick == 0 -> weaker rbs
     # pick == 1 -> stronger rbs
-    for i in len(inputs['name']):
-        if inputs['name'][i] == signal:
+    new_inputs = {}
+    new_inputs = inputs.copy()
+
+    for i in range(len(inputs['name'])):
+        if new_inputs['name'][i] == gate:
             break
 
     if pick == 0:
-        inputs['k'][i] = inputs['k']*x
+        new_inputs['k'][i] = inputs['k']*x
     elif pick == 1:
-        inputs['k'][i] = inputs['k']/x
+        new_inputs['k'][i] = inputs['k']/x
 
-    return inputs
+    return new_inputs
 
 
 # ======================================================================================
@@ -178,7 +188,6 @@ def nor_gate(ucf, inputs, not_output):
          inputs['ymin'][0]+not_output[1],
          inputs['ymax'][0]+not_output[1],
          inputs['ymax'][0]+not_output[0]]
-    print(x)
 
     ttable = [0]*4
 
@@ -203,13 +212,12 @@ def not_gate(ucf, inputs):
     print(ttable)
     return ttable
 
-
 # score = math.log10(on_min/off_max)
-
 
 # ======================================================================================
 # ===================================== NEW VALUES =====================================
 # ======================================================================================
+
 
 def compare(scores):
     # returns the index of scores[] that returns the minimum value > 0
@@ -345,66 +353,222 @@ def best_score(size, ymin, ymax, n, k, x):
 
 
 def main():
-    # Set our directory variables.
-    in_dir = os.path.join(os.getcwd(), 'input')
-    out_dir = os.path.join(os.getcwd(), 'output')
-
-    # Set our input files.
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
-    # options = 'options.csv'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
-
-    # Open then parse .json files
     in_param = read_file(input_sensor_file)
     UCF_param = read_file(in_ucf)
+    # inputs = parse_input(in_param)
+    gate_not = 'A1_AmtR_model'
+    gate_nor = 'P3_PhlF_model'
+    nor_prom = 'TetR_sensor_model'
+    not_prom = 'LuxR_sensor_model'
+    ucf = parse_UCF(UCF_param, gate_not, gate_nor)
+    inputs = parse_input(in_param, not_prom, nor_prom)
+    # not_output = not_gate(ucf, inputs)
+    # nor_output = nor_gate(ucf, inputs, not_output)
 
-    # Get user input of operations.
+    print("\n======== INPUT SIGNALS ======== \n")
+    # ans = input(
+    #     "Choose a NOT gate promoter:\n(a) LacI\n(b) TetR\n(c) AraC\n(d) LuxR\n(x) default\n")
+
+    # if ans == 'a':
+    #     not_prom = 'LacI_sensor_model'
+    # elif ans == 'b':
+    #     not_prom = 'TetR_sensor_model'
+    # elif ans == 'c':
+    #     not_prom = 'AraC_sensor_model'
+    # elif ans == 'd':
+    #     not_prom = 'LuxR_sensor_model'
+    # elif ans == 'x':
+    #     not_prom = 'LuxR_sensor_model'
+    # else:
+    #     sys.exit('Invalid  entry.\n')
+
     operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-    operation = operation.split()
-    while len(operation) > 4 or len(operation) == 0:
-        print("Incorrect entry of operations. Try again.\n")
-        operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-        operation = operation.split()
+    operation = [i for i in operation]
 
-    # xhi = in_param[1]
-    # xlow = in_param[2]
-    # x = [xhi, xlow]
-    # ymax = UCF_param[1]
-    # ymin = UCF_param[2]
-    # k = UCF_param[3]
-    # n = UCF_param[4]
-    if x > 1.05:
-        sys.exit("Invalid x value\n")
-    # Call functions based on truth table.
+    if len(operation) > 4:
+        sys.exit("Invalid entry. Too many operations.\n")
+
     for i in range(len(operation)):
-        match operation[i]:
-            case 'a':
-                stretch(x, ymax, ymin)
-            case 'b':
-                slope(n, x, 1)
-            case 'c':
-                slope(n, x, 0)
-            case 'd':
-                promoter(x, ymax, ymin, 1)
-            case 'e':
-                promoter(x, ymax, ymin, 0)
-            case 'f':
-                rbs(k, x, 1)
-            case 'g':
-                rbs(k, x, 0)
-            case 'x':
-                break
+        if operation[i] == 'a':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = stretch(inputs, not_prom, float(x))
+        elif operation[i] == 'b':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = slope(inputs, 1, not_prom, float(x))
+        elif operation[i] == 'c':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = slope(inputs, 0, not_prom, float(x))
+        elif operation[i] == 'd':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = promoter(inputs, 1, not_prom, float(x))
+        elif operation[i] == 'e':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = promoter(inputs, 0, not_prom, float(x))
+        elif operation[i] == 'f':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = rbs(inputs, 1, not_prom, float(x))
+        elif operation[i] == 'g':
+            x = input("Define x value (0 >= x <= 1.05)\n")
+            if float(x) < 0 or float(x) > 1.05:
+                sys.exit("Invalid x value.\n")
+            new_inputs = rbs(inputs, 0, not_prom, float(x))
+        elif operation[i] == 'x':
+            break
+    # inputs['ymin'][0] = inputs['ymin'][0]*2
+
+    print(inputs)
+    print(new_inputs)
+    not_output = not_gate(ucf, new_inputs)
+    nor_output = nor_gate(ucf, new_inputs, not_output)
+    print('\n')
+
+    # ans = input(
+    #     "Choose a NOR gate promoter:\n(a) LacI\n(b) TetR\n(c) AraC\n(d) LuxR\n(x) default\n")
+
+    # if ans == 'a':
+    #     nor_prom = 'LacI_sensor_model'
+    # elif ans == 'b':
+    #     nor_prom = 'TetR_sensor_model'
+    # elif ans == 'c':
+    #     nor_prom = 'AraC_sensor_model'
+    # elif ans == 'd':
+    #     nor_prom = 'LuxR_sensor_model'
+    # elif ans == 'x':
+    #     nor_prom = 'TetR_sensor_model'
+    # else:
+    #     sys.exit('Invalid  entry\n')
+
+    # print("\n============ GATES ============\n")
+    # # NOR gate command line
+    # ans = input(
+    #     "Choose a NOR gate promoter:\n(a) A1_AmtR\n(b) B#_BM3R1\n(c) E1_BetI\n(d) F1_AmeR\n(e) H1_HlyIIR\n(f) I1_IcaRA\n(g) L1_LitR\n(h) N1_LmrA\n(i) P#_PhlF\n(j) Q2_QacR\n(k) R1_PsrA\n(l) S1_SrpR_model\n(x) default\n")
+    # if ans == 'a':
+    #     gate_nor = 'A1_AmtR_model'
+    # elif ans == 'b':
+    #     gate_num = input(
+    #         '(1), (2), or (3)? Enter the corresponding #\n')
+    #     if gate_num == '1':
+    #         gate_nor = 'B1_BM3R1_model'
+    #     elif gate_num == '2':
+    #         gate_nor = 'B2_BM3R1_model'
+    #     elif gate_num == '3':
+    #         gate_nor = 'B3_BM3R1_model'
+    #     else:
+    #         sys.exit("Invalid entry\n")
+    # elif ans == 'c':
+    #     gate_nor = 'E1_BetI_model'
+    # elif ans == 'd':
+    #     gate_nor = 'F1_AmeR_model'
+    # elif ans == 'e':
+    #     gate_nor = 'H1_HlyIIR_model'
+    # elif ans == 'f':
+    #     gate_nor = 'I1_IcaRA_model'
+    # elif ans == 'g':
+    #     gate_nor = 'L1_LitR_model'
+    # elif ans == 'h':
+    #     gate_nor = 'N1_LmrA_model'
+    # elif ans == 'i':
+    #     gate_num = input('(1), (2), or (3)? Enter the corresponding #\n')
+    #     if gate_num == '1':
+    #         gate_nor = 'P1_PhlF_model'
+    #     elif gate_num == '2':
+    #         gate_nor = 'P2_PhlF_model'
+    #     elif gate_num == '3':
+    #         gate_nor = 'P3_PhlF_model'
+    #     else:
+    #         sys.exit("Invalid entry\n")
+    # elif ans == 'j':
+    #     gate_nor = 'Q2_QacR_model'
+    # elif ans == 'k':
+    #     gate_nor = 'R1_PsrA_model'
+    # elif ans == 'l':
+    #     gate_num = input('(1), (2), (3), or (4)? Enter the corresponding #\n')
+    #     if gate_num == '1':
+    #         gate_nor = 'S1_SrpR_model'
+    #     elif gate_num == '2':
+    #         gate_nor = 'S2_SrpR_model'
+    #     elif gate_num == '3':
+    #         gate_nor = 'S3_SrpR_model'
+    #     elif gate_num == '4':
+    #         gate_nor = 'S4_SrpR_model'
+    #     else:
+    #         sys.exit("Invalid entry\n")
+    # elif ans == 'x':
+    #     gate_nor = 'P3_PhlF_model'
+
+    # # NOT gate command line
+    # ans = input(
+    #     "Choose a NOT gate promoter:\n(a) A1_AmtR\n(b) B#_BM3R1\n(c) E1_BetI\n(d) F1_AmeR\n(e) H1_HlyIIR\n(f) I1_IcaRA\n(g) L1_LitR\n(h) N1_LmrA\n(i) P#_PhlF\n(j) Q2_QacR\n(k) R1_PsrA\n(l) S1_SrpR_model\n(x) default\n")
+    # if ans == 'a':
+    #     gate_not = 'A1_AmtR_model'
+    # elif ans == 'b':
+    #     gate_num = input(
+    #         '(1), (2), or (3)? Enter the corresponding #\n')
+    #     if gate_num == '1':
+    #         gate_not = 'B1_BM3R1_model'
+    #     elif gate_num == '2':
+    #         gate_not = 'B2_BM3R1_model'
+    #     elif gate_num == '3':
+    #         gate_not = 'B3_BM3R1_model'
+    #     else:
+    #         sys.exit("Invalid entry\n")
+    # elif ans == 'c':
+    #     gate_not = 'E1_BetI_model'
+    # elif ans == 'd':
+    #     gate_not = 'F1_AmeR_model'
+    # elif ans == 'e':
+    #     gate_not = 'H1_HlyIIR_model'
+    # elif ans == 'f':
+    #     gate_not = 'I1_IcaRA_model'
+    # elif ans == 'g':
+    #     gate_not = 'L1_LitR_model'
+    # elif ans == 'h':
+    #     gate_not = 'N1_LmrA_model'
+    # elif ans == 'i':
+    #     gate_num = input('(1), (2), or (3)? Enter the corresponding #\n')
+    #     if gate_num == '1':
+    #         gate_not = 'P1_PhlF_model'
+    #     elif gate_num == '2':
+    #         gate_not = 'P2_PhlF_model'
+    #     elif gate_num == '3':
+    #         gate_not = 'P3_PhlF_model'
+    #     else:
+    #         sys.exit("Invalid entry\n")
+    # elif ans == 'j':
+    #     gate_not = 'Q2_QacR_model'
+    # elif ans == 'k':
+    #     gate_not = 'R1_PsrA_model'
+    # elif ans == 'l':
+    #     gate_num = input('(1), (2), (3), or (4)? Enter the corresponding #\n')
+    #     if gate_num == '1':
+    #         gate_not = 'S1_SrpR_model'
+    #     elif gate_num == '2':
+    #         gate_not = 'S2_SrpR_model'
+    #     elif gate_num == '3':
+    #         gate_not = 'S3_SrpR_model'
+    #     elif gate_num == '4':
+    #         gate_not = 'S4_SrpR_model'
+    #     else:
+    #         sys.exit("Invalid entry\n")
+    # elif ans == 'x':
+    #     gate_not = 'A1_AmtR_model'
 
 
 if __name__ == "__main__":
     main()
-
-
-# TO DO:
-# fix parse
-# match input to fxn call
-# our scoring
-# api scoring
-# decide what we want to print (scores, sequence)
