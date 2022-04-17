@@ -3,10 +3,9 @@ EC552 HW 1: Genetic Circuit Design Program
 Drew Gross and Marlee Feltham
 """
 
-import os
 import sys
-import math
 import json
+import math
 
 
 # circuit: NOT and NOR gate
@@ -108,12 +107,15 @@ def parse_input(data, not_prom, nor_prom):
 # ======================================================================================
 
 
-def stretch(inputs, gate, x):
-    new_inputs = inputs.copy()
-
+def find_idx(inputs, gate):
     for i in range(len(inputs['name'])):
         if inputs['name'][i] == gate:
-            break
+            return i
+
+
+def stretch(inputs, gate, x):
+    new_inputs = inputs.copy()
+    i = find_idx(inputs, gate)
 
     new_inputs['ymax'][i] = inputs['ymax'][i]*x
     new_inputs['ymin'][i] = inputs['ymin'][i]/x
@@ -122,20 +124,16 @@ def stretch(inputs, gate, x):
 
 
 def promoter(inputs, pick, gate, x):
-    # apply weaker or stronger promoter operation based on pick value
-    # pick == 0 -> weaker promoter
-    # pick == 1 -> stronger promoter
-    new_inputs = {}
     new_inputs = inputs.copy()
-    for i in range(len(inputs['name'])):
-
-        if inputs['name'][i] == gate:
-            break
+    i = find_idx(inputs, gate)
 
     if pick == 0:
+        # weaker promoter
         new_inputs['ymax'][i] = inputs['ymax'][i]/x
         new_inputs['ymin'][i] = inputs['ymin'][i]/x
+
     elif pick == 1:
+        # stronger promoter
         new_inputs['ymax'][i] = inputs['ymax'][i]*x
         new_inputs['ymin'][i] = inputs['ymin'][i]*x
 
@@ -143,38 +141,28 @@ def promoter(inputs, pick, gate, x):
 
 
 def slope(inputs, pick, gate, x):
-    # apply increase or decrease slope operation based on pick value
-    # pick == 0 -> decrease slope
-    # pick == 1 -> increase slope
-    new_inputs = {}
     new_inputs = inputs.copy()
+    i = find_idx(inputs, gate)
 
-    for i in range(len(inputs['name'])):
-        if inputs['name'][i] == gate:
-            break
-
-        if pick == 0:
-            new_inputs['n'][i] = inputs['n'][i]/x
-        elif pick == 1:
-            new_inputs['n'][i] = inputs['n'][i]*x
+    if pick == 0:
+        # decrease slope
+        new_inputs['n'][i] = inputs['n'][i]/x
+    elif pick == 1:
+        # increase slope
+        new_inputs['n'][i] = inputs['n'][i]*x
 
     return new_inputs
 
 
 def rbs(inputs, pick, gate, x):
-    # apply weaker or stronger RBS operation based on pick value
-    # pick == 0 -> weaker rbs
-    # pick == 1 -> stronger rbs
-    new_inputs = {}
     new_inputs = inputs.copy()
-
-    for i in range(len(inputs['name'])):
-        if new_inputs['name'][i] == gate:
-            break
+    i = find_idx(inputs, gate)
 
     if pick == 0:
+        # weaker rbs
         new_inputs['k'][i] = inputs['k']*x
     elif pick == 1:
+        # stronger rbs
         new_inputs['k'][i] = inputs['k']/x
 
     return new_inputs
@@ -186,8 +174,9 @@ def rbs(inputs, pick, gate, x):
 def nor_gate(ucf, inputs, not_output):
     x = [inputs['ymin'][0]+not_output[0],
          inputs['ymin'][0]+not_output[1],
+         inputs['ymax'][0]+not_output[0],
          inputs['ymax'][0]+not_output[1],
-         inputs['ymax'][0]+not_output[0]]
+         ]
 
     ttable = [0]*4
 
@@ -199,17 +188,28 @@ def nor_gate(ucf, inputs, not_output):
                       [0]) / (1+(x[2]/ucf['K'][0]) ** ucf['n'][0]))
     ttable[3] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
                       [0]) / (1+(x[3]/ucf['K'][0]) ** ucf['n'][0]))
-    return ttable
+
+    on_min = ttable[1]
+    off_max = ttable[3]
+    # print(ttable)
+    score = math.log10(on_min/off_max)
+    return ttable, score
 
 
 def not_gate(ucf, inputs):
     ttable = [0]*2
-
+    print(inputs['name'][1])
+    print(ucf['K'][1])
+    numer = ucf['ymax'][1]-ucf['ymin'][1]
+    denom = 1 + (inputs['ymin'][1]/ucf['K'][1])**ucf['n'][1]
+    print(numer/denom)
+    print(denom)
+    print(numer)
     ttable[0] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
-                      (1+(inputs['ymin'][0]/ucf['K'][1]) ** ucf['n'][1]))
+                      (1+(inputs['ymin'][1]/ucf['K'][1]) ** ucf['n'][1]))
     ttable[1] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
-                      (1+(inputs['ymax'][0]/ucf['K'][1]) ** ucf['n'][1]))
-    print(ttable)
+                      (1+(inputs['ymax'][1]/ucf['K'][1]) ** ucf['n'][1]))
+    # print(ttable)
     return ttable
 
 # score = math.log10(on_min/off_max)
@@ -219,133 +219,133 @@ def not_gate(ucf, inputs):
 # ======================================================================================
 
 
-def compare(scores):
-    # returns the index of scores[] that returns the minimum value > 0
-    position = scores.index(min(i for i in scores if i > 0))
+# def compare(scores):
+#     # returns the index of scores[] that returns the minimum value > 0
+#     position = scores.index(min(i for i in scores if i > 0))
 
-    return position
-
-
-def y_decision(size, UCF, inputs):
-    # performs a combination of stretch and promoter operations
-    # returns the best (lowest) score and combination of operations that modify
-    # ymax and ymin
-
-    # (1) score the circuit without applying any operations
-    # (2) score the circuit after applying the stretch operation
-    # (3) compare the scores from (1) and (2)
-    # -> get best score and ymax_new and ymin_new value
-    # (4) use ymax_new and ymin_new values from (3) as inputs for promoter()
-    # (5) score the circuits
-    # (6) compare the scores and return the best score and ymax_new and ymin_new values
-
-    ymax_r0 = []
-    ymin_r0 = []
-    ymax_r0[0] = UCF['ymax']
-    ymin_r0[0] = UCF['ymin']
-
-    # score the circuit with the original ymax and ymin values
-    original_score = score_circuit(size, UCF, inputs)
-
-    # apply stretch operation and score the circuit
-    # # compare the original and stretch scores
-    # r1 indicates which score is the lowest
-
-    # change into dict
-    # ymax_r0[1], ymin_r0[1] = stretch(inputs, UCF)
-    stretch_score = score_circuit(size, UCF, inputs)
-
-    scores = [original_score, stretch_score]
-    r1 = compare(scores)
-
-    # ymax_r1 and ymin_r1 are the specified ymax and ymin values resulting from r0
-    ymax_r1 = ymax_r0[r1]
-    ymin_r1 = ymin_r0[r1]
-
-    ymax_r2 = []
-    ymin_r2 = []
-    scores = []
-
-    for i in range(1):
-        ymax_r2[i], ymin_r2[i] = promoter(x, ymax_r1, ymin_r1, i)
-        scores[i] = score_circuit(size, ymin_r2[i], ymax_r2[i], n, k, x)
-
-    # r2 = compare(scores[0], scores[1])
-    r2_pos = compare(scores)
-    ymax_new = ymax_r2[r2_pos]
-    ymin_new = ymin_r2[r2_pos]
-
-    return ymax_new, ymin_new, scores[r2_pos]
+#     return position
 
 
-def n_decision(size, ymin, ymax, n, k, x):
-    # performs slope operation
-    # returns the best (lowest) score and combination of operations that modify n
-    original_score = score_circuit(size, ymin, ymax, n, k, x)
+# def y_decision(size, UCF, inputs):
+#     # performs a combination of stretch and promoter operations
+#     # returns the best (lowest) score and combination of operations that modify
+#     # ymax and ymin
 
-    n_vals = []
-    scores = []
-    n_vals[0] = n
-    scores[0] = original_score
+#     # (1) score the circuit without applying any operations
+#     # (2) score the circuit after applying the stretch operation
+#     # (3) compare the scores from (1) and (2)
+#     # -> get best score and ymax_new and ymin_new value
+#     # (4) use ymax_new and ymin_new values from (3) as inputs for promoter()
+#     # (5) score the circuits
+#     # (6) compare the scores and return the best score and ymax_new and ymin_new values
 
-    for i in range(1):
-        n_vals[i+1] = slope(n, x, i)
-        scores[i+1] = score_circuit(size, ymin, ymax, n_vals[i+1], k, x)
+#     ymax_r0 = []
+#     ymin_r0 = []
+#     ymax_r0[0] = UCF['ymax']
+#     ymin_r0[0] = UCF['ymin']
 
-    pos = compare(scores)
+#     # score the circuit with the original ymax and ymin values
+#     original_score = score_circuit(size, UCF, inputs)
 
-    return n_vals[pos], scores[pos]
+#     # apply stretch operation and score the circuit
+#     # # compare the original and stretch scores
+#     # r1 indicates which score is the lowest
+
+#     # change into dict
+#     # ymax_r0[1], ymin_r0[1] = stretch(inputs, UCF)
+#     stretch_score = score_circuit(size, UCF, inputs)
+
+#     scores = [original_score, stretch_score]
+#     r1 = compare(scores)
+
+#     # ymax_r1 and ymin_r1 are the specified ymax and ymin values resulting from r0
+#     ymax_r1 = ymax_r0[r1]
+#     ymin_r1 = ymin_r0[r1]
+
+#     ymax_r2 = []
+#     ymin_r2 = []
+#     scores = []
+
+#     for i in range(1):
+#         ymax_r2[i], ymin_r2[i] = promoter(x, ymax_r1, ymin_r1, i)
+#         scores[i] = score_circuit(size, ymin_r2[i], ymax_r2[i], n, k, x)
+
+#     # r2 = compare(scores[0], scores[1])
+#     r2_pos = compare(scores)
+#     ymax_new = ymax_r2[r2_pos]
+#     ymin_new = ymin_r2[r2_pos]
+
+#     return ymax_new, ymin_new, scores[r2_pos]
 
 
-def k_decision(size, ymin, ymax, n, k, x):
-    # performs RBS operation
-    # returns the best (lowest) score and combination of operations that modify K
-    original_score = score_circuit(size, ymin, ymax, n, k, x)
+# def n_decision(size, ymin, ymax, n, k, x):
+#     # performs slope operation
+#     # returns the best (lowest) score and combination of operations that modify n
+#     original_score = score_circuit(size, ymin, ymax, n, k, x)
 
-    k_vals = []
-    scores = []
-    k_vals[0] = k
-    scores[0] = original_score
+#     n_vals = []
+#     scores = []
+#     n_vals[0] = n
+#     scores[0] = original_score
 
-    for i in range(1):
-        k_vals[i+1] = rbs(k, x, i)
-        scores[i+1] = score_circuit(size, ymin, ymax, n, k_vals[i+1], x)
+#     for i in range(1):
+#         n_vals[i+1] = slope(n, x, i)
+#         scores[i+1] = score_circuit(size, ymin, ymax, n_vals[i+1], k, x)
 
-    pos = compare(scores)
+#     pos = compare(scores)
 
-    return k_vals[pos], scores[pos]
+#     return n_vals[pos], scores[pos]
 
 
-def best_score(size, ymin, ymax, n, k, x):
-    # (1) retrieve outputs of y, n, and k_decision
-    # (2) add scores to list scores[]
-    # (3) generate scores from all combinations of each new parameter
-    # (4) find and return the best score
-    ymax_new, ymin_new, y_decision_score = y_decision(
-        size, ymin, ymax, n, k, x)
-    n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
-    k_new, k_decision_score = k_decision(size, ymin, ymax, n, k, x)
+# def k_decision(size, ymin, ymax, n, k, x):
+#     # performs RBS operation
+#     # returns the best (lowest) score and combination of operations that modify K
+#     original_score = score_circuit(size, ymin, ymax, n, k, x)
 
-    scores = [y_decision_score, n_decision_score, k_decision_score]
+#     k_vals = []
+#     scores = []
+#     k_vals[0] = k
+#     scores[0] = original_score
 
-    ymaxs = [ymax, ymax_new]
-    ymins = [ymin, ymin_new]
-    ns = [n, n_new]
-    ks = [k, k_new]
+#     for i in range(1):
+#         k_vals[i+1] = rbs(k, x, i)
+#         scores[i+1] = score_circuit(size, ymin, ymax, n, k_vals[i+1], x)
 
-    params = 3
-    num = 2**params  # 8 combinations
+#     pos = compare(scores)
 
-    for i in range(num-1):
-        bin = format(i, "b")
-        scores[i+3] = score_circuit(size, ymins[bin[0]],
-                                    ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
+#     return k_vals[pos], scores[pos]
 
-   # best_score = min(i for i in scores if i > 0)
-    pos = compare(scores)
-    best_score = scores[pos]
 
-    return best_score
+# def best_score(size, ymin, ymax, n, k, x):
+#     # (1) retrieve outputs of y, n, and k_decision
+#     # (2) add scores to list scores[]
+#     # (3) generate scores from all combinations of each new parameter
+#     # (4) find and return the best score
+#     ymax_new, ymin_new, y_decision_score = y_decision(
+#         size, ymin, ymax, n, k, x)
+#     n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
+#     k_new, k_decision_score = k_decision(size, ymin, ymax, n, k, x)
+
+#     scores = [y_decision_score, n_decision_score, k_decision_score]
+
+#     ymaxs = [ymax, ymax_new]
+#     ymins = [ymin, ymin_new]
+#     ns = [n, n_new]
+#     ks = [k, k_new]
+
+#     params = 3
+#     num = 2**params  # 8 combinations
+
+#     for i in range(num-1):
+#         bin = format(i, "b")
+#         scores[i+3] = score_circuit(size, ymins[bin[0]],
+#                                     ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
+
+#    # best_score = min(i for i in scores if i > 0)
+#     pos = compare(scores)
+#     best_score = scores[pos]
+
+#     return best_score
 
 # ======================================================================================
 # ========================================MAIN==========================================
@@ -429,13 +429,15 @@ def main():
                 sys.exit("Invalid x value.\n")
             new_inputs = rbs(inputs, 0, not_prom, float(x))
         elif operation[i] == 'x':
+            new_inputs = inputs.copy()
             break
     # inputs['ymin'][0] = inputs['ymin'][0]*2
 
-    print(inputs)
-    print(new_inputs)
+    # print(inputs)
+    # print(new_inputs)
     not_output = not_gate(ucf, new_inputs)
-    nor_output = nor_gate(ucf, new_inputs, not_output)
+    nor_output, score = nor_gate(ucf, new_inputs, not_output)
+    print(score)
     print('\n')
 
     # ans = input(
