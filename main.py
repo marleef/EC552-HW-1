@@ -119,6 +119,7 @@ def stretch(inputs, gate, x):
     new_inputs['ymax'][i] = inputs['ymax'][i]*x
     new_inputs['ymin'][i] = inputs['ymin'][i]/x
 
+    print('stretch: ', new_inputs)
     return new_inputs
 
 
@@ -136,7 +137,9 @@ def promoter(inputs, pick, gate, x):
         new_inputs['ymax'][i] = inputs['ymax'][i]*x
         new_inputs['ymin'][i] = inputs['ymin'][i]*x
 
-    return inputs
+    print('promoter: ', new_inputs)
+
+    return new_inputs
 
 
 def slope(inputs, pick, gate, x):
@@ -149,6 +152,8 @@ def slope(inputs, pick, gate, x):
     elif pick == 1:
         # increase slope
         new_inputs['n'][i] = inputs['n'][i]*x
+
+    print('slope: ', new_inputs)
 
     return new_inputs
 
@@ -163,6 +168,8 @@ def rbs(inputs, pick, gate, x):
     elif pick == 1:
         # stronger rbs
         new_inputs['k'][i] = inputs['k']/x
+
+    print('rbs: ', new_inputs)
 
     return new_inputs
 
@@ -218,7 +225,8 @@ def merge(inputs, param):
     cpy2 = copy.deepcopy(inputs[1])
 
     for i in range(len(param)):
-        cpy[param[i]][0] = cpy2[param[i]][0]
+        cpy[param[i]][1] = cpy2[param[i]][1]
+        print('cpy param:', cpy[param[i]])
     return cpy
 
 
@@ -242,7 +250,7 @@ def y_decision(ucf, inputs, nor_prom, not_prom):
     scores.append(score_circuit(ucf, ins[i+1]))
     ins.append(inputs)
     idx = scores.index(min(scores))  # best inputs index
-
+    print('ins: ', ins)
     prom_inputs = []
     scores = [original_score]
 
@@ -278,7 +286,12 @@ def n_decision(ucf, inputs, nor_prom, not_prom):
     slope_inputs.append(merge(slope_inputs, 'n'))
     scores.append(score_circuit(ucf, slope_inputs[i+1]))
 
-    ins = [inputs, slope_inputs]
+    # ins = [inputs, slope_inputs]
+    ins = [inputs]
+    for i in range(len(slope_inputs)):
+        ins.append(slope_inputs[i])
+    print('n ins: ', ins)
+
     idx = scores.index(min(scores))
 
     return ins[idx], scores[idx]
@@ -300,7 +313,10 @@ def k_decision(ucf, inputs, nor_prom, not_prom):
     rbs_inputs.append(merge(rbs_inputs, 'K'))
     scores.append(score_circuit(ucf, rbs_inputs[i+1]))
 
-    ins = [inputs, rbs_inputs]
+    # ins = [inputs, rbs_inputs]
+    ins = [inputs]
+    for i in range(len(rbs_inputs)):
+        ins.append(rbs_inputs[i])
     idx = scores.index(min(scores))
 
     return ins[idx], scores[idx]
@@ -312,7 +328,7 @@ def best_score(ucf, inputs, nor_prom, not_prom):
     k_inputs, k_score = k_decision(ucf, inputs, nor_prom, not_prom)
 
     scores = [y_score, n_score, k_score]
-
+    print('scores: ', scores)
     ins = [inputs, y_inputs, n_inputs, k_inputs]
 
     cpy = copy.deepcopy(y_inputs)
