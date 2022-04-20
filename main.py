@@ -67,7 +67,7 @@ def parse_UCF(data, gate_not, gate_nor):
     ucf['n'] = n
     ucf['K'] = k
 
-    print(ucf)
+    # print('ucf parameters: ', ucf)
     return ucf
 
 
@@ -98,7 +98,7 @@ def parse_input(data, not_prom, nor_prom):
     inputs['n'] = n
     inputs['K'] = k
 
-    print(inputs)
+    print('input parameters: ', inputs)
     return inputs
 
 # ======================================================================================
@@ -106,82 +106,82 @@ def parse_input(data, not_prom, nor_prom):
 # ======================================================================================
 
 
-def find_idx(inputs, gate):
-    for i in range(len(inputs['name'])):
-        if inputs['name'][i] == gate:
+def find_idx(ucf, gate):
+    for i in range(len(ucf['name'])):
+        if ucf['name'][i] == gate:
             return i
 
 
-def stretch(inputs, gate, x):
-    new_inputs = copy.deepcopy(inputs)
-    i = find_idx(inputs, gate)
+def stretch(ucf, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
 
-    new_inputs['ymax'][i] = inputs['ymax'][i]*x
-    new_inputs['ymin'][i] = inputs['ymin'][i]/x
+    new_ucf['ymax'][i] = ucf['ymax'][i]*x
+    new_ucf['ymin'][i] = ucf['ymin'][i]/x
 
-    print('stretch: ', new_inputs)
-    return new_inputs
+    # print('stretch: ', new_ucf)
+    return new_ucf
 
 
-def promoter(inputs, pick, gate, x):
-    new_inputs = copy.deepcopy(inputs)
-    i = find_idx(inputs, gate)
+def promoter(ucf, pick, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
 
     if pick == 0:
         # weaker promoter
-        new_inputs['ymax'][i] = inputs['ymax'][i]/x
-        new_inputs['ymin'][i] = inputs['ymin'][i]/x
+        new_ucf['ymax'][i] = ucf['ymax'][i]/x
+        new_ucf['ymin'][i] = ucf['ymin'][i]/x
 
     elif pick == 1:
         # stronger promoter
-        new_inputs['ymax'][i] = inputs['ymax'][i]*x
-        new_inputs['ymin'][i] = inputs['ymin'][i]*x
+        new_ucf['ymax'][i] = ucf['ymax'][i]*x
+        new_ucf['ymin'][i] = ucf['ymin'][i]*x
 
-    print('promoter: ', new_inputs)
+    # print('promoter: ', new_ucf)
 
-    return new_inputs
+    return new_ucf
 
 
-def slope(inputs, pick, gate, x):
-    new_inputs = copy.deepcopy(inputs)
-    i = find_idx(inputs, gate)
+def slope(ucf, pick, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
 
     if pick == 0:
         # decrease slope
-        new_inputs['n'][i] = inputs['n'][i]/x
+        new_ucf['n'][i] = ucf['n'][i]/x
     elif pick == 1:
         # increase slope
-        new_inputs['n'][i] = inputs['n'][i]*x
+        new_ucf['n'][i] = ucf['n'][i]*x
 
-    print('slope: ', new_inputs)
+    # print('slope: ', new_ucf)
 
-    return new_inputs
+    return new_ucf
 
 
-def rbs(inputs, pick, gate, x):
-    new_inputs = copy.deepcopy(inputs)
-    i = find_idx(inputs, gate)
+def rbs(ucf, pick, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
 
     if pick == 0:
         # weaker rbs
-        new_inputs['k'][i] = inputs['k']*x
+        new_ucf['k'][i] = ucf['k']*x
     elif pick == 1:
         # stronger rbs
-        new_inputs['k'][i] = inputs['k']/x
+        new_ucf['k'][i] = ucf['k']/x
 
-    print('rbs: ', new_inputs)
+    # print('rbs: ', new_ucf)
 
-    return new_inputs
+    return new_ucf
 
 
 # ======================================================================================
 # =================================== SCORE CIRCUIT ====================================
 # ======================================================================================
 def nor_gate(ucf, inputs, not_output):
-    x = [inputs['ymin'][0]+not_output[0],
-         inputs['ymin'][0]+not_output[1],
-         inputs['ymax'][0]+not_output[0],
-         inputs['ymax'][0]+not_output[1]]
+    x = [ucf['ymin'][0]+not_output[0],
+         ucf['ymin'][0]+not_output[1],
+         ucf['ymax'][0]+not_output[0],
+         ucf['ymax'][0]+not_output[1]]
 
     ttable = [0]*4
     ttable[0] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
@@ -207,7 +207,7 @@ def not_gate(ucf, inputs):
                       (1+(inputs['ymin'][1]/ucf['K'][1]) ** ucf['n'][1]))
     ttable[1] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
                       (1+(inputs['ymax'][1]/ucf['K'][1]) ** ucf['n'][1]))
-    print(ttable)
+    # print(ttable)
     return ttable
 
 
@@ -220,135 +220,135 @@ def score_circuit(ucf, inputs):
 # ======================================================================================
 # ===================================== NEW VALUES =====================================
 # ======================================================================================
-def merge(inputs, param):
-    cpy = copy.deepcopy(inputs[0])
-    cpy2 = copy.deepcopy(inputs[1])
+def merge(ucf, param):
+    cpy = copy.deepcopy(ucf[0])
+    cpy2 = copy.deepcopy(ucf[1])
 
     for i in range(len(param)):
         cpy[param[i]][1] = cpy2[param[i]][1]
-        print('cpy param:', cpy[param[i]])
+        # print('cpy param:', cpy[param[i]])
     return cpy
 
 
-def y_decision(ucf, inputs, nor_prom, not_prom):
+def y_decision(ucf, inputs, gate_nor, gate_not):
     # performs a combination of stretch and promoter operations
     # returns the best (lowest) score and combination of operations that modify
     # ymax and ymin
 
-    proms = [nor_prom, not_prom]
+    gates = [gate_nor, gate_not]
     original_score = score_circuit(ucf, inputs)
 
     x = .85
     scores = [original_score]
-    ins = []
+    ucfs = []
 
-    for i in range(len(proms)):
-        ins.append(stretch(inputs, proms[i], x))
-        scores.append(score_circuit(ucf, ins[i]))
+    for i in range(len(gates)):
+        ucfs.append(stretch(ucf, gates[i], x))
+        scores.append(score_circuit(ucfs[i], inputs))
 
-    ins.append(merge(ins, ['ymax', 'ymin']))
-    scores.append(score_circuit(ucf, ins[i+1]))
-    ins.append(inputs)
-    idx = scores.index(min(scores))  # best inputs index
-    print('ins: ', ins)
-    prom_inputs = []
+    ucfs.append(merge(ucfs, ['ymax', 'ymin']))
+    scores.append(score_circuit(ucfs[i+1], inputs))
+    ucfs.append(ucf)
+    idx = scores.index(min(scores))  # best ucfs index
+    # print('ucfs: ', ucfs)
+    prom_ucf = []
     scores = [original_score]
 
-    for i in range(len(proms)):
-        prom_inputs.append(promoter(ins[idx], i, proms[i], x))
-        scores.append(score_circuit(ucf, prom_inputs[i]))
+    for i in range(len(gates)):
+        prom_ucf.append(promoter(ucfs[idx], i, gates[i], x))
+        scores.append(score_circuit(prom_ucf[i], inputs))
 
-    prom_inputs.append(merge(prom_inputs, ['ymax', 'ymin']))
-    scores.append(score_circuit(ucf, prom_inputs[i+1]))
+    prom_ucf.append(merge(prom_ucf, ['ymax', 'ymin']))
+    scores.append(score_circuit(prom_ucf[i+1], inputs))
 
-    ins = [inputs]
-    for i in range(len(prom_inputs)):
-        ins.append(prom_inputs[i])
+    ucfs = [ucf]
+    for i in range(len(prom_ucf)):
+        ucfs.append(prom_ucf[i])
 
     idx = scores.index(min(scores))  # best inputs index
 
-    return ins[idx], scores[idx]
+    return ucfs[idx], scores[idx]
 
 
-def n_decision(ucf, inputs, nor_prom, not_prom):
+def n_decision(ucf, inputs, gate_nor, gate_not):
     # performs slope operation
     # returns the best (lowest) score and combination of operations that modify n
-    proms = [nor_prom, not_prom]
+    gates = [gate_nor, gate_not]
     original_score = score_circuit(ucf, inputs)
     x = .85
     scores = [original_score]
-    slope_inputs = []
+    slope_ucf = []
 
-    for i in range(len(proms)):
-        slope_inputs.append(slope(inputs, i, proms[i], x))
-        scores.append(score_circuit(ucf, slope_inputs[i]))
+    for i in range(len(gates)):
+        slope_ucf.append(slope(ucf, i, gates[i], x))
+        scores.append(score_circuit(slope_ucf[i], inputs))
 
-    slope_inputs.append(merge(slope_inputs, 'n'))
-    scores.append(score_circuit(ucf, slope_inputs[i+1]))
+    slope_ucf.append(merge(slope_ucf, 'n'))
+    scores.append(score_circuit(slope_ucf[i+1], inputs))
 
-    # ins = [inputs, slope_inputs]
-    ins = [inputs]
-    for i in range(len(slope_inputs)):
-        ins.append(slope_inputs[i])
-    print('n ins: ', ins)
+    ins = [ucf]
+    for i in range(len(slope_ucf)):
+        ins.append(slope_ucf[i])
+    # print('n ins: ', ins)
 
     idx = scores.index(min(scores))
 
     return ins[idx], scores[idx]
 
 
-def k_decision(ucf, inputs, nor_prom, not_prom):
+def k_decision(ucf, inputs, gate_nor, gate_not):
     # performs RBS operation
     # returns the best (lowest) score and combination of operations that modify K
-    proms = [nor_prom, not_prom]
+    gates = [gate_nor, gate_not]
     original_score = score_circuit(ucf, inputs)
     x = .85
     scores = [original_score]
-    rbs_inputs = []
+    rbs_ucf = []
 
-    for i in range(len(proms)):
-        rbs_inputs.append(slope(inputs, i, proms[i], x))
-        scores.append(score_circuit(ucf, rbs_inputs[i]))
+    for i in range(len(gates)):
+        rbs_ucf.append(slope(ucf, i, gates[i], x))
+        scores.append(score_circuit(rbs_ucf[i], inputs))
 
-    rbs_inputs.append(merge(rbs_inputs, 'K'))
-    scores.append(score_circuit(ucf, rbs_inputs[i+1]))
+    rbs_ucf.append(merge(rbs_ucf, 'K'))
+    scores.append(score_circuit(rbs_ucf[i+1], inputs))
 
-    # ins = [inputs, rbs_inputs]
-    ins = [inputs]
-    for i in range(len(rbs_inputs)):
-        ins.append(rbs_inputs[i])
+    ins = [ucf]
+    for i in range(len(rbs_ucf)):
+        ins.append(rbs_ucf[i])
+    # print('n ins: ', ins)
+
     idx = scores.index(min(scores))
 
     return ins[idx], scores[idx]
 
 
-def best_score(ucf, inputs, nor_prom, not_prom):
-    y_inputs, y_score = y_decision(ucf, inputs, nor_prom, not_prom)
-    n_inputs, n_score = n_decision(ucf, inputs, nor_prom, not_prom)
-    k_inputs, k_score = k_decision(ucf, inputs, nor_prom, not_prom)
+def best_score(ucf, inputs, gate_nor, gate_not):
+    y_ucf, y_score = y_decision(ucf, inputs, gate_nor, gate_not)
+    n_ucf, n_score = n_decision(ucf, inputs, gate_nor, gate_not)
+    k_ucf, k_score = k_decision(ucf, inputs, gate_nor, gate_not)
 
     scores = [y_score, n_score, k_score]
-    print('scores: ', scores)
-    ins = [inputs, y_inputs, n_inputs, k_inputs]
+    # print('scores: ', scores)
+    ucfs = [ucf, y_ucf, n_ucf, k_ucf]
 
-    cpy = copy.deepcopy(y_inputs)
-    cpy['n'] = n_inputs['n']
-    ins.append(cpy)
+    cpy = copy.deepcopy(y_ucf)
+    cpy['n'] = n_ucf['n']
+    ucfs.append(cpy)
 
-    cpy = copy.deepcopy(y_inputs)
-    cpy['K'] = k_inputs['K']
-    ins.append(cpy)
+    cpy = copy.deepcopy(y_ucf)
+    cpy['K'] = k_ucf['K']
+    ucfs.append(cpy)
 
-    cpy['n'] = n_inputs['n']
-    ins.append(cpy)
+    cpy['n'] = n_ucf['n']
+    ucfs.append(cpy)
 
-    cpy = copy.deepcopy(n_inputs)
-    cpy['K'] = n_inputs['n']
-    ins.append(cpy)
+    cpy = copy.deepcopy(k_ucf)
+    cpy['n'] = n_ucf['n']
+    ucfs.append(cpy)
     # [inputs, y, n, k, y+n, y+k, y+k+n, n+k]
 
-    for i in range(len(ins)-4):
-        scores.append(score_circuit(ucf, ins[i+4]))
+    for i in range(len(ucfs)-4):
+        scores.append(score_circuit(ucfs[i+4], inputs))
 
     idx = scores.index(min(scores))
 
@@ -356,7 +356,7 @@ def best_score(ucf, inputs, nor_prom, not_prom):
 
 
 def x_in():
-    x = input("Define x value (0 < x <= 1.05)\n")
+    x = input("Define x value (0 < x <= 1.05): \n")
     if float(x) <= 0 or float(x) > 1.05:
         sys.exit("Invalid x value.\n")
     return x
@@ -380,33 +380,52 @@ def main():
     ucf = parse_UCF(UCF_param, gate_not, gate_nor)
     inputs = parse_input(in_param, not_prom, nor_prom)
 
-    print("\n======== INPUT SIGNALS ======== \n")
-    operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+    print('====== INPUT SIGNALS ================================ \n')
+    operation = input("Choose up to 4 operations to perform on the NOT gate input from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
     operation = [i for i in operation]
 
     if len(operation) > 4:
         sys.exit("Invalid entry. Too many operations.\n")
 
+    is_op = 1
     for i in range(len(operation)):
         if operation[i] == 'a':
-            new_inputs = stretch(inputs, not_prom, float(x_in()))
+            new_ucf = stretch(ucf, gate_nor, float(x_in()))
         elif operation[i] == 'b':
-            new_inputs = slope(inputs, 1, not_prom, float(x_in()))
+            new_ucf = slope(ucf, 1, gate_nor, float(x_in()))
         elif operation[i] == 'c':
-            new_inputs = slope(inputs, 0, not_prom, float(x_in()))
+            new_ucf = slope(ucf, 0, gate_nor, float(x_in()))
         elif operation[i] == 'd':
-            new_inputs = promoter(inputs, 1, not_prom, float(x_in()))
+            new_ucf = promoter(ucf, 1, gate_nor, float(x_in()))
         elif operation[i] == 'e':
-            new_inputs = promoter(inputs, 0, not_prom, float(x_in()))
+            new_ucf = promoter(ucf, 0, gate_nor, float(x_in()))
         elif operation[i] == 'f':
-            new_inputs = rbs(inputs, 1, not_prom, float(x_in()))
+            new_ucf = rbs(ucf, 1, gate_nor, float(x_in()))
         elif operation[i] == 'g':
-            new_inputs = rbs(inputs, 0, not_prom, float(x_in()))
+            new_ucf = rbs(ucf, 0, gate_nor, float(x_in()))
         elif operation[i] == 'x':
-            new_inputs = inputs.copy()
+            is_op = 0
             break
 
-    print(best_score(ucf, inputs, nor_prom, not_prom))
+    print('\n')
+    print('====== Assignment ===================================')
+    print('pTetR        0011')
+    print('pLuxStar     0101')
+
+    print('P3_PhlF      pLuxStar')
+    print('A1_AmtR      pLuxStar    pTetR')
+
+    print('Output       A1_AmtR')
+    print('\n')
+    if is_op == 0:
+        print('====== Default Score (No Operations) ================')
+        print(score_circuit(ucf, inputs))
+        print('\n')
+        print('====== Optimized Score ==============================')
+        print(best_score(ucf, inputs, gate_nor, gate_not))
+    elif is_op == 1:
+        print('====== Score with Operations ========================')
+        print(score_circuit(new_ucf, inputs))
     print('\n')
 
 
