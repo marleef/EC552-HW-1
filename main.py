@@ -3,32 +3,31 @@ EC552 HW 1: Genetic Circuit Design Program
 Drew Gross and Marlee Feltham
 """
 
-import os
 import sys
-import math
-from celloapi2 import CelloQuery, CelloResult
 import json
+import math
+import copy
+
+
+# circuit: NOT and NOR gate
+# pLuxStar----- NOT P3_PhlF ________
+#                      pTet ________|---NOR A1_AmtR--output
+# not input: pluxstar
+# not gate: P3_PhlF
+# nor input a: not output
+# nor input b: ptet
+# nor gate: A1_AmtR
 
 # ======================================================================================
 # ====================================== FILE R/W ======================================
 # ======================================================================================
 
-
-def read_file(fname, chassis_name):
+def read_file(fname):
     # open and read .input and .UCF JSON files
     with open('input/' + fname, 'r') as file:
         content = file.read()
     data = json.loads(content)
-    if fname == f'{chassis_name}.input.json':
-        name, xhi, xlow = parse_input(data)
-        file.close()
-        return name, xhi, xlow
-        # data_list = parse_UCF(data)
-    elif fname == f'{chassis_name}.UCF.json':
-        name, ymax, ymin, K, n = parse_UCF(data)
-        file.close()
-        return name, ymax, ymin, K, n
-        # data_list = parse_input(data)
+    return data
 
 
 def write_output(fname, data):
@@ -42,338 +41,391 @@ def write_output(fname, data):
 # ======================================================================================
 
 
-def parse_UCF(data):
-    # parse .UCF JSON and store parameters in corresponding lists
+def parse_UCF(data, gate_not, gate_nor):
+    ucf = {}
     name = []
     ymax = []
     ymin = []
-    K = []
     n = []
-
+    k = []
     for i in range(len(data)):
-        if data[i]["collection"] == 'models':
-            add_name = data[i]['name']
-            if (data[i]["collection"] == 'parameters'):
-                for j in range(len(data[i][name])):
-                    if data[i]['name'] == 'ymax':
-                        ymax.append(data[i]['name']['value'])
-                    elif data[i]['name'] == 'ymin':
-                        ymin.append(data[i]['name']['value'])
-                    elif data[i]['name'] == 'K':
-                        K.append(data[i]['name']['value'])
-                    elif data[i]['name'] == 'n':
-                        n.append(data[i]['name']['value'])
+        if data[i]["collection"] == "models":
+            if data[i]['name'] == gate_not or data[i]['name'] == gate_nor:
+                name.append(data[i]['name'])
+                for j in range(len(data[i]['parameters'])):
+                    if data[i]['parameters'][j]['name'] == 'ymax':
+                        ymax.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'ymin':
+                        ymin.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'n':
+                        n.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'K':
+                        k.append(data[i]['parameters'][j]['value'])
 
-    return name, ymax, ymin, K, n
+    ucf['name'] = name
+    ucf['ymin'] = ymin
+    ucf['ymax'] = ymax
+    ucf['n'] = n
+    ucf['K'] = k
+
+    # print('ucf parameters: ', ucf)
+    return ucf
 
 
-def parse_input(data):
-    # parse .input JSON and store parameters in corresponding lists
+def parse_input(data, not_prom, nor_prom):
+    inputs = {}
     name = []
-    xhi = []
-    xlow = []
-
+    ymax = []
+    ymin = []
+    n = []
+    k = []
     for i in range(len(data)):
-        if data[i]["collection"] == 'models':
-            name_add = data[i]['name']
-            if data[i]['name'] == 'ymax':
-                xhi_add = data[i]['name']['value']
-            elif data[i]['name'] == 'ymin':
-                xlow_add = data[i]['name']['value']
-                xhi.append(xhi_add)
-                xlow.append(xlow_add)
-            name.append(name_add)
+        if data[i]['collection'] == 'models':
+            if data[i]['name'] == not_prom or data[i]['name'] == nor_prom:
+                name.append(data[i]['name'])
+                for j in range(len(data[i]['parameters'])):
+                    if data[i]['parameters'][j]['name'] == 'ymax':
+                        ymax.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'ymin':
+                        ymin.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'alpha':
+                        n.append(data[i]['parameters'][j]['value'])
+                    elif data[i]['parameters'][j]['name'] == 'beta':
+                        k.append(data[i]['parameters'][j]['value'])
 
-    return name, xlow, xhi
+    inputs['name'] = name
+    inputs['ymin'] = ymin
+    inputs['ymax'] = ymax
+    inputs['n'] = n
+    inputs['K'] = k
+
+    print('input parameters: ', inputs)
+    return inputs
 
 # ======================================================================================
 # ===================================== OPERATIONS =====================================
 # ======================================================================================
 
-
-def stretch(x, ymax, ymin):
-    # apply stretch operation
-    ymax_new = ymax*x
-    ymin_new = ymin/x
-
-    return ymax_new, ymin_new
+def find_idx(ucf, gate):
+    for i in range(len(ucf['name'])):
+        if ucf['name'][i] == gate:
+            return i
 
 
-def promoter(x, ymax, ymin, pick):
-    # apply weaker or stronger promoter operation based on pick value
-    # pick == 0 -> weaker promoter
-    # pick == 1 -> stronger promoter
+def stretch(ucf, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
+
+    new_ucf['ymax'][i] = ucf['ymax'][i]*x
+    new_ucf['ymin'][i] = ucf['ymin'][i]/x
+
+    # print('stretch: ', new_ucf)
+    return new_ucf
+
+
+def promoter(ucf, pick, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
+
     if pick == 0:
-        ymax_new = ymax/x
-        ymin_new = ymin/x
+        # weaker promoter
+        new_ucf['ymax'][i] = ucf['ymax'][i]/x
+        new_ucf['ymin'][i] = ucf['ymin'][i]/x
+
     elif pick == 1:
-        ymax_new = ymax*x
-        ymin_new = ymin*x
+        # stronger promoter
+        new_ucf['ymax'][i] = ucf['ymax'][i]*x
+        new_ucf['ymin'][i] = ucf['ymin'][i]*x
 
-    return ymax_new, ymin_new
+    # print('promoter: ', new_ucf)
 
-
-def slope(n, x, pick):
-    # apply increase or decrease slope operation based on pick value
-    # pick == 0 -> decrease slope
-    # pick == 1 -> increase slope
-    if x <= 1.05:
-        if pick == 0:
-            n_new = n/x
-        elif pick == 1:
-            n_new = n*x
-    else:
-        sys.exit("Invalid x value\n")
-
-    return n_new
+    return new_ucf
 
 
-def rbs(k, x, pick):
-    # apply weaker or stronger RBS operation based on pick value
-    # pick == 0 -> weaker rbs
-    # pick == 1 -> stronger rbs
+def slope(ucf, pick, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
+
     if pick == 0:
-        k_new = k*x
+        # decrease slope
+        new_ucf['n'][i] = ucf['n'][i]/x
     elif pick == 1:
-        k_new = k/x
+        # increase slope
+        new_ucf['n'][i] = ucf['n'][i]*x
 
-    return k_new
+    # print('slope: ', new_ucf)
+
+    return new_ucf
+
+
+def rbs(ucf, pick, gate, x):
+    new_ucf = copy.deepcopy(ucf)
+    i = find_idx(ucf, gate)
+
+    if pick == 0:
+        # weaker rbs
+        new_ucf['k'][i] = ucf['k']*x
+    elif pick == 1:
+        # stronger rbs
+        new_ucf['k'][i] = ucf['k']/x
+
+    # print('rbs: ', new_ucf)
+
+    return new_ucf
 
 
 # ======================================================================================
 # =================================== SCORE CIRCUIT ====================================
 # ======================================================================================
+def nor_gate(ucf, inputs, not_output):
+    x = [ucf['ymin'][0]+not_output[0],
+         ucf['ymin'][0]+not_output[1],
+         ucf['ymax'][0]+not_output[0],
+         ucf['ymax'][0]+not_output[1]]
 
-def response_function(ymin, ymax, n, k, x):
-    # generate response function given parameters
-    response = ymin + (ymax-ymin)/(1+(x/k) ^ n)
+    ttable = [0]*4
+    ttable[0] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[0]/ucf['K'][0]) ** ucf['n'][0]))
+    ttable[1] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[1]/ucf['K'][0]) ** ucf['n'][0]))
+    ttable[2] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[2]/ucf['K'][0]) ** ucf['n'][0]))
+    ttable[3] = float(ucf['ymin'][0] + (ucf['ymax'][0]-ucf['ymin']
+                      [0]) / (1+(x[3]/ucf['K'][0]) ** ucf['n'][0]))
 
-    return response
-
-
-def score_circuit(size, ymin, ymax, n, k, x):
-    # construct truth table for gate
-    ttable = [0]*size
-    for i in range(0, size-1):
-        ttable[i] = response_function(ymin, ymax, n, k, x[i])
-
-    on_min = ttable[0]
-
-    # score the gate based on the truth table
-    if size == 2:
-        off_max = max(ttable[1])
-    else:
-        off_max = max(ttable[1, 3])
-
+    on_min = ttable[1]
+    off_max = ttable[3]
     score = math.log10(on_min/off_max)
+    return ttable, score
 
+
+def not_gate(ucf, inputs):
+    ttable = [0]*2
+
+    ttable[0] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
+                      (1+(inputs['ymin'][1]/ucf['K'][1]) ** ucf['n'][1]))
+    ttable[1] = float(ucf['ymin'][1] + (ucf['ymax'][1]-ucf['ymin'][1]) /
+                      (1+(inputs['ymax'][1]/ucf['K'][1]) ** ucf['n'][1]))
+    # print(ttable)
+    return ttable
+
+
+def score_circuit(ucf, inputs):
+    not_output = not_gate(ucf, inputs)
+    [ttable, score] = nor_gate(ucf, inputs, not_output)
     return score
 
 
 # ======================================================================================
 # ===================================== NEW VALUES =====================================
 # ======================================================================================
+def merge(ucf, param):
+    cpy = copy.deepcopy(ucf[0])
+    cpy2 = copy.deepcopy(ucf[1])
 
-def compare(scores):
-    # returns the index of scores[] that returns the minimum value > 0
-    position = scores.index(min(i for i in scores if i > 0))
+    for i in range(len(param)):
+        cpy[param[i]][1] = cpy2[param[i]][1]
+        # print('cpy param:', cpy[param[i]])
+    return cpy
 
-    return position
 
-
-def y_decision(size, ymin, ymax, n, k, x):
+def y_decision(ucf, inputs, gate_nor, gate_not):
     # performs a combination of stretch and promoter operations
     # returns the best (lowest) score and combination of operations that modify
     # ymax and ymin
 
-    # (1) score the circuit without applying any operations
-    # (2) score the circuit after applying the stretch operation
-    # (3) compare the scores from (1) and (2)
-    # -> get best score and ymax_new and ymin_new value
-    # (4) use ymax_new and ymin_new values from (3) as inputs for promoter()
-    # (5) score the circuits
-    # (6) compare the scores and return the best score and ymax_new and ymin_new values
-    ymax_r0 = []
-    ymin_r0 = []
-    ymax_r0[0] = ymax
-    ymin_r0[0] = ymin
-    # score the circuit with the original ymax and ymin values
-    original_score = score_circuit(size, ymin, ymax, n, k, x)
+    gates = [gate_nor, gate_not]
+    original_score = score_circuit(ucf, inputs)
 
-    # apply stretch operation and score the circuit
-    # # compare the original and stretch scores
-    # r1 indicates which score is the lowest
-    ymax_r0[1], ymin_r0[1] = stretch(x, ymax, ymin)
-    stretch_score = score_circuit(size, ymin_r0[1], ymax_r0[1], n, k, x)
+    x = .85
+    scores = [original_score]
+    ucfs = []
 
-    scores = [original_score, stretch_score]
-    r1 = compare(scores)
+    for i in range(len(gates)):
+        ucfs.append(stretch(ucf, gates[i], x))
+        scores.append(score_circuit(ucfs[i], inputs))
 
-    # ymax_r1 and ymin_r1 are the specified ymax and ymin values resulting from r0
-    ymax_r1 = ymax_r0[r1]
-    ymin_r1 = ymin_r0[r1]
+    ucfs.append(merge(ucfs, ['ymax', 'ymin']))
+    scores.append(score_circuit(ucfs[i+1], inputs))
+    ucfs.append(ucf)
+    idx = scores.index(min(scores))  # best ucfs index
+    # print('ucfs: ', ucfs)
+    prom_ucf = []
+    scores = [original_score]
 
-    ymax_r2 = []
-    ymin_r2 = []
-    scores = []
+    for i in range(len(gates)):
+        prom_ucf.append(promoter(ucfs[idx], i, gates[i], x))
+        scores.append(score_circuit(prom_ucf[i], inputs))
 
-    for i in range(1):
-        ymax_r2[i], ymin_r2[i] = promoter(x, ymax_r1, ymin_r1, i)
-        scores[i] = score_circuit(size, ymin_r2[i], ymax_r2[i], n, k, x)
+    prom_ucf.append(merge(prom_ucf, ['ymax', 'ymin']))
+    scores.append(score_circuit(prom_ucf[i+1], inputs))
 
-    # r2 = compare(scores[0], scores[1])
-    r2_pos = compare(scores)
-    ymax_new = ymax_r2[r2_pos]
-    ymin_new = ymin_r2[r2_pos]
+    ucfs = [ucf]
+    for i in range(len(prom_ucf)):
+        ucfs.append(prom_ucf[i])
 
-    return ymax_new, ymin_new, scores[r2_pos]
+    idx = scores.index(min(scores))  # best inputs index
+
+    return ucfs[idx], scores[idx]
 
 
-def n_decision(size, ymin, ymax, n, k, x):
+def n_decision(ucf, inputs, gate_nor, gate_not):
     # performs slope operation
     # returns the best (lowest) score and combination of operations that modify n
-    original_score = score_circuit(size, ymin, ymax, n, k, x)
+    gates = [gate_nor, gate_not]
+    original_score = score_circuit(ucf, inputs)
+    x = .85
+    scores = [original_score]
+    slope_ucf = []
 
-    n_vals = []
-    scores = []
-    n_vals[0] = n
-    scores[0] = original_score
+    for i in range(len(gates)):
+        slope_ucf.append(slope(ucf, i, gates[i], x))
+        scores.append(score_circuit(slope_ucf[i], inputs))
 
-    for i in range(1):
-        n_vals[i+1] = slope(n, x, i)
-        scores[i+1] = score_circuit(size, ymin, ymax, n_vals[i+1], k, x)
+    slope_ucf.append(merge(slope_ucf, 'n'))
+    scores.append(score_circuit(slope_ucf[i+1], inputs))
 
-    pos = compare(scores)
+    ins = [ucf]
+    for i in range(len(slope_ucf)):
+        ins.append(slope_ucf[i])
+    # print('n ins: ', ins)
 
-    return n_vals[pos], scores[pos]
+    idx = scores.index(min(scores))
+
+    return ins[idx], scores[idx]
 
 
-def k_decision(size, ymin, ymax, n, k, x):
+def k_decision(ucf, inputs, gate_nor, gate_not):
     # performs RBS operation
     # returns the best (lowest) score and combination of operations that modify K
-    original_score = score_circuit(size, ymin, ymax, n, k, x)
+    gates = [gate_nor, gate_not]
+    original_score = score_circuit(ucf, inputs)
+    x = .85
+    scores = [original_score]
+    rbs_ucf = []
 
-    k_vals = []
-    scores = []
-    k_vals[0] = k
-    scores[0] = original_score
+    for i in range(len(gates)):
+        rbs_ucf.append(slope(ucf, i, gates[i], x))
+        scores.append(score_circuit(rbs_ucf[i], inputs))
 
-    for i in range(1):
-        k_vals[i+1] = rbs(k, x, i)
-        scores[i+1] = score_circuit(size, ymin, ymax, n, k_vals[i+1], x)
+    rbs_ucf.append(merge(rbs_ucf, 'K'))
+    scores.append(score_circuit(rbs_ucf[i+1], inputs))
 
-    pos = compare(scores)
+    ins = [ucf]
+    for i in range(len(rbs_ucf)):
+        ins.append(rbs_ucf[i])
+    # print('n ins: ', ins)
 
-    return k_vals[pos], scores[pos]
+    idx = scores.index(min(scores))
+
+    return ins[idx], scores[idx]
 
 
-def best_score(size, ymin, ymax, n, k, x):
-    # (1) retrieve outputs of y, n, and k_decision
-    # (2) add scores to list scores[]
-    # (3) generate scores from all combinations of each new parameter
-    # (4) find and return the best score
-    ymax_new, ymin_new, y_decision_score = y_decision(
-        size, ymin, ymax, n, k, x)
-    n_new, n_decision_score = n_decision(size, ymin, ymax, n, k, x)
-    k_new, k_decision_score = k_decision(size, ymin, ymax, n, k, x)
+def best_score(ucf, inputs, gate_nor, gate_not):
+    y_ucf, y_score = y_decision(ucf, inputs, gate_nor, gate_not)
+    n_ucf, n_score = n_decision(ucf, inputs, gate_nor, gate_not)
+    k_ucf, k_score = k_decision(ucf, inputs, gate_nor, gate_not)
 
-    scores = [y_decision_score, n_decision_score, k_decision_score]
+    scores = [y_score, n_score, k_score]
+    # print('scores: ', scores)
+    ucfs = [ucf, y_ucf, n_ucf, k_ucf]
 
-    ymaxs = [ymax, ymax_new]
-    ymins = [ymin, ymin_new]
-    ns = [n, n_new]
-    ks = [k, k_new]
+    cpy = copy.deepcopy(y_ucf)
+    cpy['n'] = n_ucf['n']
+    ucfs.append(cpy)
 
-    params = 3
-    num = 2**params  # 8 combinations
+    cpy = copy.deepcopy(y_ucf)
+    cpy['K'] = k_ucf['K']
+    ucfs.append(cpy)
 
-    for i in range(num-1):
-        bin = format(i, "b")
-        scores[i+3] = score_circuit(size, ymins[bin[0]],
-                                    ymaxs[bin[0]], ns[bin[1]], ks[bin[2]])
+    cpy['n'] = n_ucf['n']
+    ucfs.append(cpy)
 
-   # best_score = min(i for i in scores if i > 0)
-    pos = compare(scores)
-    best_score = scores[pos]
+    cpy = copy.deepcopy(k_ucf)
+    cpy['n'] = n_ucf['n']
+    ucfs.append(cpy)
+    # [inputs, y, n, k, y+n, y+k, y+k+n, n+k]
 
-    return best_score
+    for i in range(len(ucfs)-4):
+        scores.append(score_circuit(ucfs[i+4], inputs))
 
+    idx = scores.index(min(scores))
+
+    return scores[idx]
+
+
+def x_in():
+    x = input("Define x value (0 < x <= 1.05): \n")
+    if float(x) <= 0 or float(x) > 1.05:
+        sys.exit("Invalid x value.\n")
+    return x
 # ======================================================================================
 # ========================================MAIN==========================================
 # ======================================================================================
 
 
 def main():
-    # Set our directory variables.
-    in_dir = os.path.join(os.getcwd(), 'input')
-    out_dir = os.path.join(os.getcwd(), 'output')
-
-    # Set our input files.
     chassis_name = 'Eco1C1G1T1'
     in_ucf = f'{chassis_name}.UCF.json'
-    v_file = 'logic.v'
     input_sensor_file = f'{chassis_name}.input.json'
     output_device_file = f'{chassis_name}.output.json'
-    q = CelloQuery(
-        input_directory=in_dir,
-        output_directory=out_dir,
-        verilog_file=v_file,
-        compiler_options=None,
-        input_ucf=in_ucf,
-        input_sensors=input_sensor_file,
-        output_device=output_device_file,
-    )
+    in_param = read_file(input_sensor_file)
+    UCF_param = read_file(in_ucf)
 
-    # Open then parse .json files
-    in_param = read_file(input_sensor_file, chassis_name)
-    UCF_param = read_file(in_ucf, chassis_name)
+    gate_not = 'A1_AmtR_model'
+    gate_nor = 'P3_PhlF_model'
+    nor_prom = 'TetR_sensor_model'
+    not_prom = 'LuxR_sensor_model'
+    ucf = parse_UCF(UCF_param, gate_not, gate_nor)
+    inputs = parse_input(in_param, not_prom, nor_prom)
 
-    # Get user input of operations.
-    operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-    operation = operation.split()
-    while len(operation) > 4 or len(operation) == 0:
-        print("Incorrect entry of operations. Try again.\n")
-        operation = input("Choose up to 4 operations from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
-        operation = operation.split()
+    print('====== INPUT SIGNALS ================================ \n')
+    operation = input("Choose up to 4 operations to perform on the NOT gate input from the following list:\n(a) Stretch\n(b) Increase slope\n(c) Decrease slope\n(d) Stronger promoter\n(e) Weaker promoter\n(f) Stronger RBS\n(g) Weaker RBS\n(x) done\n")
+    operation = [i for i in operation]
 
-    xhi = in_param[1]
-    xlow = in_param[2]
-    x = [xhi, xlow]
-    ymax = UCF_param[1]
-    ymin = UCF_param[2]
-    k = UCF_param[3]
-    n = UCF_param[4]
+    if len(operation) > 4:
+        sys.exit("Invalid entry. Too many operations.\n")
 
-    # Call functions based on truth table.
+    is_op = 1
     for i in range(len(operation)):
-        match operation[i]:
-            case 'a':
-                stretch(x, ymax, ymin)
-            case 'b':
-                slope(n, x, 1)
-            case 'c':
-                slope(n, x, 0)
-            case 'd':
-                promoter(x, ymax, ymin, 1)
-            case 'e':
-                promoter(x, ymax, ymin, 0)
-            case 'f':
-                rbs(k, x, 1)
-            case 'g':
-                rbs(k, x, 0)
-            case 'x':
-                break
-    if logic_gate == 'NOT':
-        size = 2
-    elif logic_gate == 'NOR':
-        size = 4
-    our_score = score_circuit(size, ymin, ymax, n, k, x)
-    # Submit our query to Cello. This might take a second.
-    q.get_results()
-    # Fetch our Results.
-    res = CelloResult(results_dir=out_dir)
-    print(res.circuit_score)
+        if operation[i] == 'a':
+            new_ucf = stretch(ucf, gate_nor, float(x_in()))
+        elif operation[i] == 'b':
+            new_ucf = slope(ucf, 1, gate_nor, float(x_in()))
+        elif operation[i] == 'c':
+            new_ucf = slope(ucf, 0, gate_nor, float(x_in()))
+        elif operation[i] == 'd':
+            new_ucf = promoter(ucf, 1, gate_nor, float(x_in()))
+        elif operation[i] == 'e':
+            new_ucf = promoter(ucf, 0, gate_nor, float(x_in()))
+        elif operation[i] == 'f':
+            new_ucf = rbs(ucf, 1, gate_nor, float(x_in()))
+        elif operation[i] == 'g':
+            new_ucf = rbs(ucf, 0, gate_nor, float(x_in()))
+        elif operation[i] == 'x':
+            is_op = 0
+            break
 
+    print('\n')
+    print('====== Assignment ===================================')
+    print('pTetR        0011')
+    print('pLuxStar     0101')
+
+    print('P3_PhlF      pLuxStar')
+    print('A1_AmtR      pLuxStar    pTetR')
+
+    print('Output       A1_AmtR')
+    print('\n')
+    if is_op == 0:
+        print('====== Default Score (No Operations) ================')
+        print(score_circuit(ucf, inputs))
+        print('\n')
+        print('====== Optimized Score ==============================')
+        print(best_score(ucf, inputs, gate_nor, gate_not))
+    elif is_op == 1:
+        print('====== Score with Operations ========================')
+        print(score_circuit(new_ucf, inputs))
+    print('\n')
 
 if __name__ == "__main__":
     main()
