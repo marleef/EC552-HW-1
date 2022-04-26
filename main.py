@@ -32,7 +32,7 @@ def read_file(fname):
 
 def write_output(fname, data):
     # open and write to .output JSON file
-    with open(fname, 'w') as file:
+    with open('output/' + fname, 'w') as file:
         json.dump(data, file)
     file.close()
 
@@ -164,10 +164,10 @@ def rbs(ucf, pick, gate, x):
 
     if pick == 0:
         # weaker rbs
-        new_ucf['k'][i] = ucf['k']*x
+        new_ucf['K'][i] = ucf['K'][i]*x
     elif pick == 1:
         # stronger rbs
-        new_ucf['k'][i] = ucf['k']/x
+        new_ucf['K'][i] = ucf['K'][i]/x
 
     # print('rbs: ', new_ucf)
 
@@ -372,10 +372,24 @@ def main():
     in_param = read_file(input_sensor_file)
     UCF_param = read_file(in_ucf)
 
-    gate_not = 'A1_AmtR_model'
-    gate_nor = 'P3_PhlF_model'
-    nor_prom = 'TetR_sensor_model'
-    not_prom = 'LuxR_sensor_model'
+    print('====== MODEL CHOICE ================================ \n')
+    print('Please refer to .json files & use underscores for this section. Omit anything but the molecule name.\n')
+    gate_choice = str(input("Assignment or Custom?: \n"))
+    #print(gate_choice)
+    if gate_choice in ["Assignment", "assignment"]:
+        gate_not = 'A1_AmtR_model'
+        gate_nor = 'P3_PhlF_model'
+        nor_prom = 'TetR_sensor_model'
+        not_prom = 'LuxR_sensor_model'
+    elif gate_choice in ["Custom", "custom"]:
+        gate_not = input("Enter NOT gate model: \n") + '_model'
+        gate_nor = input("Enter NOR gate model: \n") + '_model'
+        not_prom = input("Enter NOT sensor model: \n") + '_sensor_model'
+        nor_prom = input("Enter NOR sensor model: \n") + '_sensor_model'
+    elif gate_choice in ["Assignment","assignment","Custom","custom"]:
+            sys.exit("Invalid entry.\n")
+    print('\n')
+
     ucf = parse_UCF(UCF_param, gate_not, gate_nor)
     inputs = parse_input(in_param, not_prom, nor_prom)
 
@@ -403,29 +417,35 @@ def main():
         elif operation[i] == 'g':
             new_ucf = rbs(ucf, 0, gate_nor, float(x_in()))
         elif operation[i] == 'x':
-            is_op = 0
+            if i==0:
+                is_op = 0
             break
 
-    print('\n')
-    print('====== Assignment ===================================')
-    print('pTetR        0011')
-    print('pLuxStar     0101')
+    if gate_choice in ["Assignment","assignment"]:
+        print('\n')
+        print('====== Assignment ===================================')
+        print('pTetR        0011')
+        print('pLuxStar     0101')
 
-    print('P3_PhlF      pLuxStar')
-    print('A1_AmtR      pLuxStar    pTetR')
+        print('P3_PhlF      pLuxStar')
+        print('A1_AmtR      pLuxStar    pTetR')
 
-    print('Output       A1_AmtR')
-    print('\n')
+        print('Output       A1_AmtR')
+        print('\n')
+
     if is_op == 0:
         print('====== Default Score (No Operations) ================')
         print(score_circuit(ucf, inputs))
         print('\n')
         print('====== Optimized Score ==============================')
         print(best_score(ucf, inputs, gate_nor, gate_not))
+        write_output(output_device_file,[ucf,inputs])
     elif is_op == 1:
         print('====== Score with Operations ========================')
         print(score_circuit(new_ucf, inputs))
-    print('\n')
+        write_output(output_device_file,[new_ucf,inputs])
+
+    print('\nYour parameter data is available in ',output_device_file,'. Thanks!\n')
 
 if __name__ == "__main__":
     main()
